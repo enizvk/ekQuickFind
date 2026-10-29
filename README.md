@@ -40,6 +40,17 @@
 
 ---
 
+
+## 📦 Get it
+
+| | |
+| --- | --- |
+| ⬇️ **Direct download** | Grab the latest APK from [Releases](https://github.com/enizvk/ekQuickFind/releases/latest). This version keeps itself up to date: it checks once a day on Wi-Fi and installs new versions after you allow it once. |
+
+Requires Android 17 or newer. ekQuickFind is free and open source. 💚
+
+--- 
+
 ## ✨ Highlights
 
 Spotlight made "just type it" the fastest way around a Mac. ekQuickFind brings that to Android: open it, type two or three letters and the thing you want is already selected. Press Enter and it opens. 🚀
@@ -162,14 +173,6 @@ Everything above is configurable, grouped into pages like the system Settings ap
 - 🧠 Smart suggestions are learned from your own history, on the phone.
 - 📋 The clipboard is only read when you tap the Clipboard chip. The clips you open are kept on the phone for 7 days, never in backups, and Clear history removes them. Text Android marks as sensitive, like passwords, is never read or kept.
 - ☁️ History is left out of cloud backups unless you turn that on.
-
-## 📦 Get it
-
-| | |
-| --- | --- |
-| ⬇️ **Direct download** | Grab the latest APK from [Releases](https://github.com/enizvk/ekQuickFind/releases/latest). This version keeps itself up to date: it checks once a day on Wi-Fi and installs new versions after you allow it once. |
-
-Requires Android 17 or newer. ekQuickFind is free and open source. 💚
 
 ## 💡 Tips
 

@@ -33,15 +33,61 @@ class PersonalisationPreferencesTest {
         assertTrue(p.autoUpdate)
         assertEquals(AccentColor.System, p.accent)
         assertFalse(p.photoTags)
-        assertFalse(p.floatingButton)
+        assertTrue(p.floatingButton)
+        assertEquals(SearchEngineChoice.Google, p.searchEngine)
         assertEquals(52, p.floatingButtonSizeDp)
         assertEquals(0.85f, p.floatingButtonOpacity, 0f)
         assertTrue(p.floatingButtonOnRight)
+        assertFalse(p.exactMatch)
+        assertTrue(p.exactMatchButton)
+        assertEquals(5, p.recentsCount)
+        assertTrue(p.smartSuggestions)
+        assertTrue(p.nextUp)
+        assertTrue(p.clipboardChip)
+        assertTrue(p.barAnimationOn)
+        assertTrue(p.itemAnimationOn)
+        assertEquals(ItemAnimation.Settle, p.itemAnimation)
+        assertEquals(ActiveItemStyle.TintedCard, p.activeItemStyle)
+        assertEquals(1f, p.textScale, 0f)
+        assertEquals(ResultFont.Default, p.resultFont)
+        assertEquals(ResultWeight.Regular, p.resultWeight)
+        assertEquals(TopResultStyle.Inline, p.topResult)
+        assertEquals(BarAnimation.TwinLights, p.barAnimation)
         assertEquals(StripPosition.Top, p.stripPosition)
         assertEquals(SectionKey.defaultOrder, p.sectionOrder)
         assertEquals(SectionLayout.Grid, p.layoutFor(SectionKey.Apps))
         assertEquals(SectionLayout.Chips, p.layoutFor(SectionKey.Recent))
-        assertEquals(SectionLayout.Rows, p.layoutFor(SectionKey.Settings))
+        assertEquals(SectionLayout.Chips, p.layoutFor(SectionKey.Settings))
+    }
+
+    @Test
+    fun resettingRestoresEverySettingButKeepsHiddenResultsAndTheTileState() {
+        val customised =
+            UserPreferences(
+                theme = ThemeMode.Dark,
+                textScale = 1.4f,
+                floatingButton = true,
+                photoTags = true,
+                resultFont = ResultFont.Serif,
+                hiddenResults = mapOf("apps:com.example" to "Example"),
+                tileAdded = true,
+            )
+        val reset = customised.resetToDefaults()
+        assertEquals(UserPreferences(hiddenResults = mapOf("apps:com.example" to "Example"), tileAdded = true), reset)
+    }
+
+    @Test
+    fun recentItemsCountStaysBetweenOneAndTwenty() {
+        assertEquals(1, UserPreferences(recentsCount = 0).sanitized().recentsCount)
+        assertEquals(20, UserPreferences(recentsCount = 40).sanitized().recentsCount)
+        assertEquals(7, UserPreferences(recentsCount = 7).sanitized().recentsCount)
+    }
+
+    @Test
+    fun textSizeStaysWithinTheSliderRange() {
+        assertEquals(0.8f, UserPreferences(textScale = 0.5f).sanitized().textScale, 0f)
+        assertEquals(1.6f, UserPreferences(textScale = 3f).sanitized().textScale, 0f)
+        assertEquals(1.2f, UserPreferences(textScale = 1.2f).sanitized().textScale, 0f)
     }
 
     @Test
@@ -122,6 +168,7 @@ class PersonalisationPreferencesTest {
                     SectionKey.Apps,
                     SectionKey.QuickAnswers,
                     SectionKey.Contacts,
+                    SectionKey.Calendar,
                     SectionKey.Files,
                     SectionKey.Web,
                     SectionKey.AskAi,
@@ -144,9 +191,10 @@ class PersonalisationPreferencesTest {
             assertEquals(
                 listOf(
                     SectionKey.QuickAnswers,
-                    SectionKey.Settings,
                     SectionKey.Apps,
+                    SectionKey.Settings,
                     SectionKey.Contacts,
+                    SectionKey.Calendar,
                     SectionKey.Files,
                     SectionKey.Web,
                     SectionKey.AskAi,

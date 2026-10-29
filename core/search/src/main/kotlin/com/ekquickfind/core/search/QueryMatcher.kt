@@ -78,6 +78,7 @@ object QueryMatcher {
     fun score(
         query: String,
         target: MatchTarget,
+        exact: Boolean = false,
     ): Float? {
         val text = target.normalized
         if (query.isEmpty() || text.isEmpty()) return null
@@ -86,6 +87,13 @@ object QueryMatcher {
 
         return when {
             text == query -> EXACT
+            // Exact mode: the typed text has to be whole words ("eren" finds "Ali Eren", not "Erenay").
+            exact ->
+                when (wholeWordIndex(query, text)) {
+                    -1 -> null
+                    0 -> PREFIX + 0.1f * coverage
+                    else -> WORD_PREFIX + 0.05f * coverage
+                }
             text.startsWith(query) -> PREFIX + 0.1f * coverage
             target.words.drop(1).any { it.startsWith(query) } -> WORD_PREFIX + 0.05f * coverage
             query.length < FUZZY_MIN_LENGTH -> if (shortInitials(query, target)) INITIALS else null
@@ -104,22 +112,24 @@ object QueryMatcher {
     fun highlight(
         query: String,
         target: MatchTarget,
+        exact: Boolean = false,
     ): List<IntRange> {
         val text = target.normalized
         if (query.isEmpty() || text.isEmpty()) return emptyList()
         val ranges: List<IntRange> =
             when {
+                exact ->
+                    wholeWordIndex(query, text)
+                        .takeIf { it >= 0 }
+                        ?.let { listOf(it until it + query.length) }
+                        .orEmpty()
                 text.startsWith(query) -> listOf(0 until query.length)
                 else -> {
                     val word = target.wordStarts.drop(1).firstOrNull { it.second.startsWith(query) }
                     when {
                         word != null -> listOf(word.first until word.first + query.length)
                         query.length < FUZZY_MIN_LENGTH ->
-                            if (shortInitials(
-                                    query,
-                                    target,
-                                )
-                            ) {
+                            if (shortInitials(query, target)) {
                                 target.wordStarts.take(query.length).map { it.first..it.first }
                             } else {
                                 emptyList()
@@ -163,6 +173,20 @@ object QueryMatcher {
         }
     }
 
+    /** Where [query] first sits in [text] with no letter or digit right before or after it; -1 if nowhere. */
+    private fun wholeWordIndex(
+        query: String,
+        text: String,
+    ): Int {
+        var i = text.indexOf(query)
+        while (i >= 0) {
+            val end = i + query.length
+            if ((i == 0 || !text[i - 1].isLetterOrDigit()) && (end == text.length || !text[end].isLetterOrDigit())) return i
+            i = text.indexOf(query, i + 1)
+        }
+        return -1
+    }
+
     private fun shortInitials(
         query: String,
         target: MatchTarget,
@@ -196,7 +220,8 @@ object QueryMatcher {
     fun bestScore(
         query: String,
         targets: List<MatchTarget>,
-    ): Float? = targets.mapNotNull { score(query, it) }.maxOrNull()
+        exact: Boolean = false,
+    ): Float? = targets.mapNotNull { score(query, it, exact) }.maxOrNull()
 
     private fun matchesAllWords(
         query: String,

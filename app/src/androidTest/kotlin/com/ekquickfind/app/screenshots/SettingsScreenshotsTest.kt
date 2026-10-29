@@ -50,7 +50,7 @@ class SettingsScreenshotsTest {
         assumeTrue(InstrumentationRegistry.getArguments().getString("screenshots") == "true")
         hilt.inject()
         saved = runBlocking { prefs.preferences.first() }
-        runBlocking { prefs.update { UserPreferences(hiddenResults = it.hiddenResults) } }
+        runBlocking { prefs.update { com.ekquickfind.app.testBaseline(it) } }
         SearchLauncher.launch()
         compose.waitUntilAtLeastOneExists(hasTestTag("query"), 5_000)
     }
@@ -94,6 +94,6 @@ class SettingsScreenshotsTest {
     }
 
     private companion object {
-        val LONG_PAGES = setOf(SettingsPage.Sources, SettingsPage.Results, SettingsPage.Look)
+        val LONG_PAGES = setOf(SettingsPage.Sources, SettingsPage.Look)
     }
 }

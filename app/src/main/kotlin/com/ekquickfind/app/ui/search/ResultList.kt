@@ -2,6 +2,8 @@ package com.ekquickfind.app.ui.search
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -51,6 +53,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsPropertyKey
 import androidx.compose.ui.semantics.SemanticsPropertyReceiver
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.ekquickfind.app.ui.theme.LocalSurfaceStyle
@@ -90,10 +93,16 @@ internal fun ResultList(
     ) {
         state.top?.takeIf { it.result.id != slotId }?.let { top ->
             item(key = "top") {
+                val topSelected = selectedId == top.result.id
                 Surface(
                     shape = RoundedCornerShape(24.dp),
-                    color = MaterialTheme.colorScheme.secondaryContainer,
-                    modifier = Modifier.motion(this),
+                    color = cardColor(topSelected),
+                    // The card itself is the highlight, so its own clip can't trim it.
+                    modifier =
+                        Modifier
+                            .motion(this)
+                            .activeHighlight(topSelected, cornerRadius = 24.dp)
+                            .semantics { selected = topSelected },
                 ) {
                     // Quick cross-fade when the best match changes while typing.
                     AnimatedContent(top.result, transitionSpec = {
@@ -105,7 +114,6 @@ internal fun ResultList(
                             { onAction(r, it) },
                             prominent = true,
                             highlightQuery = highlight,
-                            selected = selectedId == r.id,
                         )
                     }
                 }
@@ -202,16 +210,30 @@ internal fun SelectedSlot(
 ) {
     Surface(
         shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.secondaryContainer,
-        modifier = modifier.padding(start = 8.dp, end = 8.dp, bottom = 8.dp).testTag("selected-slot"),
+        color = cardColor(selected = true),
+        modifier =
+            modifier
+                .padding(start = 8.dp, end = 8.dp, bottom = 8.dp)
+                .activeHighlight(selected = true, cornerRadius = 24.dp)
+                .semantics { selected = true }
+                .testTag("selected-slot"),
     ) {
         AnimatedContent(result, transitionSpec = {
             fadeIn(tween(140)) togetherWith fadeOut(tween(90))
         }, contentKey = { it.id }, label = "slot") { r ->
-            ResultRow(r, menuActions.forResult(r), { onAction(r, it) }, prominent = true, highlightQuery = highlightQuery, selected = true)
+            ResultRow(r, menuActions.forResult(r), { onAction(r, it) }, prominent = true, highlightQuery = highlightQuery)
         }
     }
 }
+
+/** The top card's own colour gives way to the active-item highlight while it's selected. */
+@Composable
+private fun cardColor(selected: Boolean) =
+    animateColorAsState(
+        if (selected) Color.Transparent else MaterialTheme.colorScheme.secondaryContainer,
+        if (LocalSurfaceStyle.current.itemAnimation != null) tween(240) else snap(),
+        label = "card",
+    ).value
 
 @Composable
 internal fun SectionHeader(

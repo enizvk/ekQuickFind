@@ -44,7 +44,7 @@ class ThemeScreenshotTest {
                         SearchSurface(
                             query = state.query.raw,
                             onQueryChange = {},
-                            state = state,
+                            engineState = state,
                             onSubmit = {},
                             onAction = { _, _ -> },
                             onDismiss = {},
@@ -106,7 +106,7 @@ class ThemeScreenshotTest {
                     query = "m",
                     onQueryChange = {},
                     // Short panel, so the top of the screen is pure scrim.
-                    state = SampleStates.loading,
+                    engineState = SampleStates.loading,
                     onSubmit = {},
                     onAction = { _, _ -> },
                     onDismiss = {},

@@ -9,13 +9,16 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.FormatQuote
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material3.FilledTonalIconToggleButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -23,6 +26,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -48,6 +52,8 @@ internal fun QueryField(
     focus: FocusRequester,
     onOpenSettings: (() -> Unit)?,
     modifier: Modifier = Modifier,
+    exactMatch: Boolean = false,
+    onToggleExact: (() -> Unit)? = null,
 ) {
     val frosted = LocalSurfaceStyle.current.background == BackgroundStyle.FrostedGlass
     val alpha = if (LocalBlurAvailable.current) 0.6f else 0.95f
@@ -58,6 +64,7 @@ internal fun QueryField(
         modifier =
             modifier
                 .fillMaxWidth()
+                .openingGlow(LocalSurfaceStyle.current.barAnimation, cornerRadius = 28.dp)
                 .focusRequester(focus)
                 // Hardware keyboards: arrows move the selected result.
                 .onPreviewKeyEvent { e ->
@@ -76,7 +83,21 @@ internal fun QueryField(
                 transitionSpec = { (fadeIn(tween(120)) + scaleIn(tween(120))) togetherWith (fadeOut(tween(90)) + scaleOut(tween(90))) },
                 label = "trailing",
             ) { empty ->
-                Row {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    // Small toggle: only whole words as typed count (no partial words, typos or initials).
+                    onToggleExact?.let { toggle ->
+                        FilledTonalIconToggleButton(
+                            checked = exactMatch,
+                            onCheckedChange = { toggle() },
+                            modifier = Modifier.size(32.dp).testTag("exact-toggle"),
+                        ) {
+                            Icon(
+                                Icons.Outlined.FormatQuote,
+                                contentDescription = if (exactMatch) "Exact match on" else "Exact match off",
+                                modifier = Modifier.size(18.dp),
+                            )
+                        }
+                    }
                     when {
                         !empty ->
                             IconButton(onClick = { onQueryChange("") }) { Icon(Icons.Outlined.Close, contentDescription = "Clear") }

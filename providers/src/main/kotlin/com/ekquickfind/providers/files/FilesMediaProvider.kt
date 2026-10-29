@@ -55,10 +55,17 @@ class FilesMediaProvider(
             val text = query.raw.trim()
             val extension = text.removePrefix(".").lowercase().takeIf { it in KNOWN_EXTENSIONS }
             val rows = withContext(io) { source.query(if (extension != null) ".$extension" else text, state.searchableKinds) }
-            val byName = rows.mapNotNull { toResult(it, query.normalized, extension) }
+            val byName = rows.mapNotNull { toResult(it, query.normalized, extension, query.exact) }
             val names = byName.map { it.id }.toSet()
             // Photos found by a tag; one already found by its name isn't listed twice.
-            val byTag = if (extension == null && MediaKind.Image in state.searchableKinds) tagResults(query.normalized) else emptyList()
+            val byTag =
+                if (extension == null &&
+                    MediaKind.Image in state.searchableKinds
+                ) {
+                    tagResults(query.normalized, query.exact)
+                } else {
+                    emptyList()
+                }
             val results = (byName + byTag.filter { it.id !in names }).sortedByDescending { it.score }
             emit(results + accessRows(state, extension))
         }
@@ -74,7 +81,10 @@ class FilesMediaProvider(
         return toResult(row, TextNormalizer.normalize(row.displayName), null)
     }
 
-    private suspend fun tagResults(q: String): List<SearchResult> {
+    private suspend fun tagResults(
+        q: String,
+        exact: Boolean,
+    ): List<SearchResult> {
         // One or two letters would match half the tags; wait for a real word.
         if (q.length < TAG_MIN_LENGTH) return emptyList()
         val hits = photoTags.matches(q).associate { it.mediaId to it.label }
@@ -85,7 +95,10 @@ class FilesMediaProvider(
                 row.uri.lastPathSegment
                     ?.toLongOrNull()
                     ?.let(hits::get) ?: return@mapNotNull null
-            val score = (QueryMatcher.bestScore(q, listOf(MatchTarget(label))) ?: TAG_FLOOR) * TAG_WEIGHT
+            // Exact mode leaves out tags without the typed text as a whole word (the index matches word starts).
+            val match = QueryMatcher.bestScore(q, listOf(MatchTarget(label)), exact)
+            if (exact && match == null) return@mapNotNull null
+            val score = (match ?: TAG_FLOOR) * TAG_WEIGHT
             resultFor(row, score, label)
         }
     }
@@ -94,13 +107,14 @@ class FilesMediaProvider(
         row: MediaRow,
         q: String,
         extension: String?,
+        exact: Boolean = false,
     ): SearchResult? {
         val score =
             if (extension != null) {
                 EXTENSION_SCORE
             } else {
                 val base = row.displayName.substringBeforeLast('.')
-                QueryMatcher.bestScore(q, listOf(MatchTarget(base), MatchTarget(row.displayName))) ?: return null
+                QueryMatcher.bestScore(q, listOf(MatchTarget(base), MatchTarget(row.displayName)), exact) ?: return null
             }
         return resultFor(row, score, tag = null)
     }

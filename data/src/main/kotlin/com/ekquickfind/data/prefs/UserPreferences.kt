@@ -31,6 +31,30 @@ enum class Density { Compact, Comfortable }
 @Serializable
 enum class SurfacePosition { Bottom, Top }
 
+/** Short glow on the search bar each time search opens. */
+@Serializable
+enum class BarAnimation { LightSweep, ColourPulse, ShimmerRing, Breathe, TwinLights }
+
+/** Plays once when a result becomes the active one; the border glows match the search bar's. */
+@Serializable
+enum class ItemAnimation { Settle, Lift, LightSweep, ColourPulse, ShimmerRing, Breathe, TwinLights }
+
+/** How the active (selected) result is marked. */
+@Serializable
+enum class ActiveItemStyle { TintedCard, SoftGlow, Gradient }
+
+/** Font for result text; the others ship inside the app, so a system font style can't replace them. */
+@Serializable
+enum class ResultFont { Default, Serif, Monospace, Condensed, Rounded }
+
+/** Weight for result text; Regular keeps the theme's mix of weights. */
+@Serializable
+enum class ResultWeight { Light, Regular, Medium, Bold }
+
+/** Featured: the best match as a big card above the sections. Inline: it stays in its section, highlighted. */
+@Serializable
+enum class TopResultStyle { Featured, Inline }
+
 /** Accent for highlights, the selected result, links and switches. System follows the wallpaper (or the default theme). */
 @Serializable
 enum class AccentColor(
@@ -72,6 +96,7 @@ enum class SectionKey {
     QuickAnswers,
     Apps,
     Contacts,
+    Calendar,
     Settings,
     Files,
     Web,
@@ -84,15 +109,16 @@ enum class SectionKey {
 
     companion object {
         /** Order of result sections; Recent lists aren't part of it. */
-        val defaultOrder = listOf(QuickAnswers, Apps, Contacts, Settings, Files, Web, AskAi)
-        val defaultLayouts = mapOf(Apps to SectionLayout.Grid, Recent to SectionLayout.Chips, AskAi to SectionLayout.Chips)
+        val defaultOrder = listOf(QuickAnswers, Apps, Contacts, Calendar, Settings, Files, Web, AskAi)
+        val defaultLayouts =
+            mapOf(Apps to SectionLayout.Grid, Settings to SectionLayout.Chips, Recent to SectionLayout.Chips, AskAi to SectionLayout.Chips)
     }
 }
 
 @Serializable
 data class UserPreferences(
     val disabledProviders: Set<String> = emptySet(),
-    val searchEngine: SearchEngineChoice = SearchEngineChoice.DuckDuckGo,
+    val searchEngine: SearchEngineChoice = SearchEngineChoice.Google,
     /** URL with %s where the query goes; used when [searchEngine] is Custom. */
     val customTemplate: String? = null,
     /** Optional OpenSearch suggestion URL with %s; a custom engine shows no suggestions without it. */
@@ -130,7 +156,30 @@ data class UserPreferences(
     /** AI chats offered under "Ask AI"; empty hides the section. */
     val aiChats: Set<AiChat> = AiChat.entries.toSet(),
     /** Round button over other apps that opens search (needs "Display over other apps"). */
-    val floatingButton: Boolean = false,
+    val floatingButton: Boolean = true,
+    /** Search for the typed text as whole words (no partial words, typos or initials); toggled from the search bar. */
+    val exactMatch: Boolean = false,
+    /** How many recently opened items show before anything is typed (panel and strip), 1..[MAX_RECENTS]. */
+    val recentsCount: Int = 5,
+    /** Before typing: what you usually open at this time or with the connected headphones/car (from history, on device). */
+    val smartSuggestions: Boolean = true,
+    /** Before typing: the next calendar event in the coming hours (needs calendar search). */
+    val nextUp: Boolean = true,
+    /** Before typing: a Clipboard chip; the clipboard is only read when it's tapped. */
+    val clipboardChip: Boolean = true,
+    /** The exact-match button in the search bar; hiding it also turns exact match off. */
+    val exactMatchButton: Boolean = true,
+    // Reduce motion turns both animations off.
+    val barAnimationOn: Boolean = true,
+    val barAnimation: BarAnimation = BarAnimation.TwinLights,
+    val itemAnimationOn: Boolean = true,
+    val itemAnimation: ItemAnimation = ItemAnimation.Settle,
+    val activeItemStyle: ActiveItemStyle = ActiveItemStyle.TintedCard,
+    /** Text size on the search screen, on top of Android's font size; 0.8..1.6 from the slider. */
+    val textScale: Float = 1f,
+    val resultFont: ResultFont = ResultFont.Default,
+    val resultWeight: ResultWeight = ResultWeight.Regular,
+    val topResult: TopResultStyle = TopResultStyle.Inline,
     val floatingButtonSizeDp: Int = 52,
     /** 0.1..1; lower lets more of the app underneath show through. */
     val floatingButtonOpacity: Float = 0.85f,
@@ -147,6 +196,9 @@ data class UserPreferences(
 ) {
     fun layoutFor(section: SectionKey): SectionLayout = sectionLayouts[section] ?: SectionKey.defaultLayouts[section] ?: SectionLayout.Rows
 
+    /** Every setting back to its default; hidden results (and excluded apps) are the user's data, and the tile state is a fact. */
+    fun resetToDefaults() = UserPreferences(hiddenResults = hiddenResults, tileAdded = tileAdded)
+
     fun sanitized() =
         copy(
             blurRadiusDp = blurRadiusDp.coerceIn(0, 60),
@@ -155,9 +207,15 @@ data class UserPreferences(
             floatingButtonSizeDp = floatingButtonSizeDp.coerceIn(36, 80),
             floatingButtonOpacity = floatingButtonOpacity.coerceIn(0.1f, 1f),
             floatingButtonY = floatingButtonY.coerceIn(0f, 1f),
+            textScale = textScale.coerceIn(MIN_TEXT_SCALE, MAX_TEXT_SCALE),
+            recentsCount = recentsCount.coerceIn(1, MAX_RECENTS),
             sectionOrder = (sectionOrder.filter { it in SectionKey.defaultOrder } + SectionKey.defaultOrder).distinct(),
         )
 }
+
+const val MAX_RECENTS = 20
+const val MIN_TEXT_SCALE = 0.8f
+const val MAX_TEXT_SCALE = 1.6f
 
 object UserPreferencesSerializer : Serializer<UserPreferences> {
     private val json =

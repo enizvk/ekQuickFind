@@ -40,6 +40,54 @@ class QueryMatcherTest {
         assertNull(score("ul", "Pulse"))
     }
 
+    private fun exact(
+        query: String,
+        text: String,
+    ) = QueryMatcher.score(TextNormalizer.normalize(query), MatchTarget(text), exact = true)
+
+    @Test
+    fun `exact match drops initials, all-words and typo matches`() {
+        assertNull(exact("vsc", "Visual Studio Code"))
+        assertNull(exact("gm", "Google Maps"))
+        assertNull(exact("whatsapq", "WhatsApp"))
+        assertNull(exact("studio visual", "Visual Studio Code"))
+    }
+
+    @Test
+    fun `exact match finds the typed text as whole words`() {
+        assertNotNull(exact("eren", "Eren Yılmaz"))
+        assertNotNull(exact("eren", "Ali Eren"))
+        assertNotNull(exact("eren", "eren_beach.jpg"))
+        assertNotNull(exact("google maps", "Google Maps"))
+    }
+
+    @Test
+    fun `exact match skips the typed text inside longer words`() {
+        assertNull(exact("eren", "Erenay"))
+        assertNull(exact("eren", "Reference"))
+        assertNull(exact("gm", "Gmail"))
+        assertNull(exact("ings", "Settings"))
+    }
+
+    @Test
+    fun `exact match ranks a name that starts with the word higher`() {
+        assertTrue(exact("eren", "Eren")!! > exact("eren", "Eren Yılmaz")!!)
+        assertTrue(exact("eren", "Eren Yılmaz")!! > exact("eren", "Ali Eren")!!)
+    }
+
+    @Test
+    fun `exact match still ignores case and accents but not short mid-word hits`() {
+        assertNotNull(exact("CAFE", "Café"))
+        assertNull(exact("ul", "Pulse"))
+    }
+
+    @Test
+    fun `exact match highlights the whole word only`() {
+        assertEquals(listOf(4..7), QueryMatcher.highlight("eren", MatchTarget("Ali Eren"), exact = true))
+        assertEquals(emptyList<IntRange>(), QueryMatcher.highlight("eren", MatchTarget("Erenay"), exact = true))
+        assertEquals(emptyList<IntRange>(), QueryMatcher.highlight("gm", MatchTarget("Google Maps"), exact = true))
+    }
+
     @Test
     fun `initials work at three letters too`() {
         assertNotNull(score("vsc", "Visual Studio Code"))

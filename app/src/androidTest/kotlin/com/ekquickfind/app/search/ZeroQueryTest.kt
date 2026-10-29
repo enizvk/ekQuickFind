@@ -53,8 +53,7 @@ class ZeroQueryTest {
         savedPrefs = runBlocking { prefs.preferences.first() }
         runBlocking {
             prefs.update {
-                com.ekquickfind.data.prefs
-                    .UserPreferences(hiddenResults = it.hiddenResults)
+                com.ekquickfind.app.testBaseline(it)
             }
         }
         wipe()

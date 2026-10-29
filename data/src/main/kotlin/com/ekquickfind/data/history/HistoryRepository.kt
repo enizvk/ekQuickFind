@@ -11,6 +11,8 @@ import kotlinx.coroutines.flow.first
 /** Everything the app remembers about use, all on device. Also the engine's ranking signal source. */
 class HistoryRepository(
     private val dao: HistoryDao,
+    /** Name of the connected headphones or car, if any; saved with each launch for suggestions. */
+    private val audioDevice: () -> String? = { null },
     private val clock: () -> Long = System::currentTimeMillis,
 ) : SignalsSource {
     val pins: Flow<List<Pin>> = dao.pins()
@@ -30,8 +32,12 @@ class HistoryRepository(
 
     suspend fun recordLaunch(result: SearchResult) {
         if (!result.isRecordable) return
-        dao.insertLaunch(LaunchEvent(resultId = result.id.value, providerId = result.providerId.value, at = clock()))
+        dao.insertLaunch(
+            LaunchEvent(resultId = result.id.value, providerId = result.providerId.value, at = clock(), audioDevice = audioDevice()),
+        )
     }
+
+    suspend fun launchesSince(since: Long): List<LaunchEvent> = dao.launchesSince(since)
 
     suspend fun pin(result: SearchResult) {
         if (!result.isRecordable) return

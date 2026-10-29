@@ -10,6 +10,7 @@ import androidx.compose.material.icons.outlined.Calculate
 import androidx.compose.material.icons.outlined.Call
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.Event
 import androidx.compose.material.icons.outlined.FlashlightOn
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.History
@@ -39,6 +40,7 @@ fun Glyph.vector(): ImageVector =
         Glyph.Search -> Icons.Outlined.Search
         Glyph.Suggestion -> Icons.Outlined.Search
         Glyph.Contact -> Icons.Outlined.Person
+        Glyph.Calendar -> Icons.Outlined.Event
         Glyph.Call -> Icons.Outlined.Call
         Glyph.Message -> Icons.AutoMirrored.Outlined.Message
         Glyph.File -> Icons.AutoMirrored.Outlined.InsertDriveFile

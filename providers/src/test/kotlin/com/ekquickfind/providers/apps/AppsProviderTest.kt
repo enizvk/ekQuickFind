@@ -41,6 +41,13 @@ class AppsProviderTest {
         }
 
     @Test
+    fun exactMatchKeepsOnlyNamesWithTheWholeWord() =
+        runTest {
+            assertEquals(listOf("Google Maps"), provider().search(Query("maps", exact = true)).first().map { it.title })
+            assertEquals(emptyList<String>(), provider().search(Query("map", exact = true)).first().map { it.title })
+        }
+
+    @Test
     fun matchesByPackageName() =
         runTest {
             assertEquals(listOf("Chrome"), provider().titles("com.android.chrome"))

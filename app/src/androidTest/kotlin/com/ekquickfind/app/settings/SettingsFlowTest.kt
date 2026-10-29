@@ -9,7 +9,9 @@ import android.net.Uri
 import android.provider.MediaStore
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasTestTag
@@ -21,13 +23,16 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.pressKey
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.rule.GrantPermissionRule
+import com.ekquickfind.app.BuildConfig
 import com.ekquickfind.app.Screenshots
 import com.ekquickfind.app.SearchLauncher
 import com.ekquickfind.app.search.SearchActivity
@@ -78,7 +83,7 @@ class SettingsFlowTest {
     fun setUp() {
         hilt.inject()
         saved = runBlocking { prefs.preferences.first() }
-        runBlocking { prefs.update { UserPreferences(hiddenResults = it.hiddenResults) } }
+        runBlocking { prefs.update { com.ekquickfind.app.testBaseline(it) } }
         activity = SearchLauncher.launch()
         compose.waitUntilAtLeastOneExists(hasTestTag("query"), 3_000)
     }
@@ -116,7 +121,7 @@ class SettingsFlowTest {
     @Test
     fun settingsOpensOnAMenuAndEachPageOpensAndReturns() {
         openSettings()
-        listOf("Sources", "WebAi", "Results", "Look", "Keyboard", "WaysToOpen", "Privacy", "About").forEach { page ->
+        listOf("Sources", "WebAi", "Look", "Keyboard", "WaysToOpen", "Privacy", "About").forEach { page ->
             compose.onNodeWithTag("settings-list").performScrollToNode(hasTestTag("settings-page:$page"))
             openPage(page)
             back()
@@ -242,7 +247,7 @@ class SettingsFlowTest {
 
     @Test
     fun draggingSettingsAboveAppsChangesTheStoredOrder() {
-        openSettings("Results")
+        openSettings("Sources")
         scrollTo("reset-order")
         val row =
             compose
@@ -283,6 +288,211 @@ class SettingsFlowTest {
         compose.waitUntil(2_000) { runBlocking { prefs.preferences.first().accent == com.ekquickfind.data.prefs.AccentColor.Red } }
         compose.onNodeWithTag("accent:System", useUnmergedTree = true).performClick()
         compose.waitUntil(2_000) { runBlocking { prefs.preferences.first().accent == com.ekquickfind.data.prefs.AccentColor.System } }
+    }
+
+    // Results settings live on the Search sources page
+
+    @Test
+    fun theMenuHasNoSeparateResultsPage() {
+        openSettings()
+        compose.waitUntil(3_000) { exists("settings-page:Sources") }
+        assertFalse(exists("settings-page:Results"))
+    }
+
+    @Test
+    fun theTextSizeSliderStoresTheChosenSize() {
+        openSettings("Look")
+        scrollTo("text-size-slider")
+        compose.onNodeWithTag("text-size-slider", useUnmergedTree = true).performSemanticsAction(SemanticsActions.SetProgress) { it(1.3f) }
+        compose.waitUntil(2_000) { runBlocking { prefs.preferences.first().textScale == 1.3f } }
+    }
+
+    @Test
+    fun previewsAreReadAsPicturesNotControls() {
+        openSettings("Look")
+        scrollTo("text-preview")
+        compose.onNodeWithTag("text-preview", useUnmergedTree = true).assertContentDescriptionEquals("Preview")
+        assertFalse(
+            compose
+                .onNodeWithTag("text-preview", useUnmergedTree = true)
+                .fetchSemanticsNode()
+                .config
+                .contains(SemanticsActions.OnClick),
+        )
+    }
+
+    @Test
+    fun theResultFontChoiceChangesTheStoredFont() {
+        openSettings("Look")
+        scrollTo("result-font:Serif")
+        compose.onNodeWithTag("result-font:Serif", useUnmergedTree = true).performClick()
+        compose.waitUntil(2_000) { runBlocking { prefs.preferences.first().resultFont == com.ekquickfind.data.prefs.ResultFont.Serif } }
+    }
+
+    @Test
+    fun theResultWeightChoiceChangesTheStoredWeightAndShowsASample() {
+        openSettings("Look")
+        scrollTo("result-weight:Bold")
+        compose.onNodeWithTag("result-weight:Bold", useUnmergedTree = true).performClick()
+        compose.waitUntil(2_000) { runBlocking { prefs.preferences.first().resultWeight == com.ekquickfind.data.prefs.ResultWeight.Bold } }
+        scrollTo("text-preview")
+    }
+
+    // Effects
+
+    @Test
+    fun choosingAnActiveItemStyleAndBarAnimationStoresThem() {
+        openSettings("Look")
+        scrollTo("active-item:Gradient")
+        compose.onNodeWithTag("active-item:Gradient", useUnmergedTree = true).performClick()
+        compose.waitUntil(2_000) {
+            runBlocking { prefs.preferences.first().activeItemStyle == com.ekquickfind.data.prefs.ActiveItemStyle.Gradient }
+        }
+        scrollTo("bar-animation:Colour pulse")
+        compose.onNodeWithTag("bar-animation:Colour pulse", useUnmergedTree = true).performClick()
+        compose.waitUntil(2_000) {
+            runBlocking { prefs.preferences.first().barAnimation == com.ekquickfind.data.prefs.BarAnimation.ColourPulse }
+        }
+    }
+
+    @Test
+    fun pickingABarAnimationShowsItInThePreview() {
+        openSettings("Look")
+        scrollTo("bar-animation:Breathe")
+        compose.onNodeWithTag("bar-animation:Breathe", useUnmergedTree = true).performClick()
+        compose.waitUntil(2_000) {
+            runBlocking { prefs.preferences.first().barAnimation == com.ekquickfind.data.prefs.BarAnimation.Breathe }
+        }
+        scrollTo("bar-preview-replay")
+        compose.onNodeWithTag("bar-preview-replay", useUnmergedTree = true).performClick()
+    }
+
+    @Test
+    fun theActiveItemPreviewFollowsItsOptionsAndHasItsOwnAnimations() {
+        openSettings("Look")
+        scrollTo("item-animation:Lift")
+        compose.onNodeWithTag("item-animation:Lift", useUnmergedTree = true).performClick()
+        compose.waitUntil(2_000) {
+            runBlocking { prefs.preferences.first().itemAnimation == com.ekquickfind.data.prefs.ItemAnimation.Lift }
+        }
+        scrollTo("active-item-preview")
+        scrollTo("active-item-preview-replay")
+        compose.onNodeWithTag("active-item-preview-replay", useUnmergedTree = true).performClick()
+    }
+
+    @Test
+    fun resettingAllSettingsRestoresDefaultsButKeepsHiddenResults() {
+        set {
+            it.copy(
+                theme = com.ekquickfind.data.prefs.ThemeMode.Dark,
+                textScale = 1.4f,
+                hiddenResults = it.hiddenResults + ("apps:com.example" to "Example"),
+            )
+        }
+        openSettings("About")
+        scrollTo("reset-settings")
+        compose.onNodeWithTag("reset-settings", useUnmergedTree = true).performClick()
+        compose.onNodeWithTag("confirm-reset", useUnmergedTree = true).performClick()
+        compose.waitUntil(3_000) {
+            runBlocking {
+                prefs.preferences.first().let {
+                    it.theme == com.ekquickfind.data.prefs.ThemeMode.System && it.textScale == 1f && "apps:com.example" in it.hiddenResults
+                }
+            }
+        }
+    }
+
+    @Test
+    fun aboutAndUpdatesShareOnePage() {
+        openSettings()
+        compose.waitUntil(3_000) { exists("settings-page:About") }
+        assertFalse(exists("settings-page:Updates"))
+        openPage("About")
+        compose.waitUntil(3_000) { exists("about") }
+        val hasUpdates = BuildConfig.UPDATE_FEED_URL.isNotBlank()
+        if (hasUpdates) scrollTo("update-status")
+    }
+
+    @Test
+    fun choosingInItsSectionStoresTheTopResultStyle() {
+        openSettings("Look")
+        scrollTo("top-result:In its section")
+        compose.onNodeWithTag("top-result:In its section", useUnmergedTree = true).performClick()
+        compose.waitUntil(2_000) {
+            runBlocking { prefs.preferences.first().topResult == com.ekquickfind.data.prefs.TopResultStyle.Inline }
+        }
+    }
+
+    @Test
+    fun inItsSectionTheBestMatchHasNoBigCardButIsStillSelected() {
+        set { it.copy(topResult = com.ekquickfind.data.prefs.TopResultStyle.Inline) }
+        compose.onNodeWithTag("query").performTextInput("s")
+        compose.waitUntil(3_000) { exists("section-Apps") }
+        assertFalse(exists("top-result"))
+        val selected =
+            compose
+                .onAllNodes(
+                    androidx.compose.ui.test
+                        .isSelected(),
+                    useUnmergedTree = true,
+                ).fetchSemanticsNodes()
+        assertEquals("exactly one selected result", 1, selected.size)
+    }
+
+    @Test
+    fun turningTheBarAnimationOffHidesOnlyItsChoices() {
+        openSettings("Look")
+        scrollTo("bar-animation-switch")
+        compose.onNodeWithTag("bar-animation-switch", useUnmergedTree = true).performClick()
+        compose.waitUntil(2_000) { runBlocking { !prefs.preferences.first().barAnimationOn } }
+        compose.waitUntil(2_000) { !exists("bar-animation:Light sweep") }
+        assertTrue(runBlocking { prefs.preferences.first().itemAnimationOn })
+    }
+
+    @Test
+    fun theRecentItemsCountTakesNumbersFromOneToTwentyOnly() {
+        openSettings("Look")
+        scrollTo("recents-count")
+        compose.onNodeWithTag("recents-count", useUnmergedTree = true).performTextReplacement("12")
+        compose.waitUntil(2_000) { runBlocking { prefs.preferences.first().recentsCount == 12 } }
+        compose.onNodeWithTag("recents-count", useUnmergedTree = true).performTextReplacement("25")
+        compose.waitForIdle()
+        assertEquals(12, runBlocking { prefs.preferences.first().recentsCount })
+    }
+
+    @Test
+    fun beforeYouTypeSwitchesTurnSuggestionsNextUpAndTheClipboardChipOff() {
+        openSettings("Sources")
+        listOf("smart-suggestions", "next-up", "clipboard-chip-switch").forEach { tag ->
+            scrollTo(tag)
+            compose.onNodeWithTag(tag, useUnmergedTree = true).performClick()
+        }
+        compose.waitUntil(2_000) {
+            runBlocking { prefs.preferences.first().let { !it.smartSuggestions && !it.nextUp && !it.clipboardChip } }
+        }
+    }
+
+    // Exact match toggle
+
+    @Test
+    fun hidingTheExactMatchButtonRemovesItAndTurnsExactMatchOff() {
+        set { it.copy(exactMatch = true) }
+        compose.waitUntil(3_000) { exists("exact-toggle") }
+        set { it.copy(exactMatchButton = false, exactMatch = false) }
+        compose.waitUntil(3_000) { !exists("exact-toggle") }
+        openSettings("Look")
+        scrollTo("exact-button-switch")
+        compose.onNodeWithTag("exact-button-switch", useUnmergedTree = true).performClick()
+        compose.waitUntil(2_000) { runBlocking { prefs.preferences.first().exactMatchButton } }
+    }
+
+    @Test
+    fun theExactMatchToggleInTheBarSwitchesTheModeOnAndOff() {
+        compose.onNodeWithTag("query").performTextInput("gm")
+        compose.onNodeWithTag("exact-toggle", useUnmergedTree = true).performClick()
+        compose.waitUntil(2_000) { runBlocking { prefs.preferences.first().exactMatch } }
+        compose.onNodeWithTag("exact-toggle", useUnmergedTree = true).performClick()
+        compose.waitUntil(2_000) { runBlocking { !prefs.preferences.first().exactMatch } }
     }
 
     // More-below indicator

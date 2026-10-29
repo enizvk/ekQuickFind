@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.map
@@ -48,10 +49,17 @@ class SearchViewModel
 
         private val refreshes = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
+        // Toggling exact match from the bar re-runs the current query.
+        private val exactMatch = prefs.preferences.map { it.exactMatch }.distinctUntilChanged()
+
         val state: StateFlow<SearchState> =
             engine
-                .results(merge(_query.map(::Query), refreshes.map { Query(_query.value) }))
-                .stateIn(viewModelScope, SharingStarted.Eagerly, SearchState.empty(Query("")))
+                .results(
+                    merge(
+                        combine(_query, exactMatch) { text, exact -> Query(text, exact) },
+                        refreshes.map { Query(_query.value, preferences.value.exactMatch) },
+                    ),
+                ).stateIn(viewModelScope, SharingStarted.Eagerly, SearchState.empty(Query("")))
 
         val zeroQueryState: StateFlow<ZeroQueryState> = zeroQuery.state.stateIn(viewModelScope, SharingStarted.Eagerly, ZeroQueryState())
 
@@ -93,6 +101,8 @@ class SearchViewModel
                 }
             }
         }
+
+        fun setExactMatch(on: Boolean) = viewModelScope.launch { prefs.update { it.copy(exactMatch = on) } }
 
         fun reset() {
             _query.value = ""

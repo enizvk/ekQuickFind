@@ -54,6 +54,7 @@ fun ZeroQueryContent(
     onQuery: (String) -> Unit,
     onForgetRecent: (SearchResult) -> Unit,
     onClearHistory: () -> Unit = {},
+    showClipboard: Boolean = false,
 ) {
     var confirmClear by remember { mutableStateOf(false) }
     if (confirmClear) {
@@ -66,7 +67,10 @@ fun ZeroQueryContent(
         )
     }
     if (state.isEmpty) {
-        ZeroQueryHint()
+        Column {
+            if (showClipboard) ClipboardSection(onSearch = onQuery)
+            ZeroQueryHint()
+        }
         return
     }
     Column(
@@ -75,6 +79,8 @@ fun ZeroQueryContent(
             .animateContentSize()
             .testTag("zero-query"),
     ) {
+        if (showClipboard) ClipboardSection(onSearch = onQuery)
+        RowsSection("Next up", listOfNotNull(state.nextUp), menuActions, onAction)
         RowsSection("Pinned", state.pinned, menuActions, onAction)
         val style = LocalSurfaceStyle.current
         val clear = @Composable {

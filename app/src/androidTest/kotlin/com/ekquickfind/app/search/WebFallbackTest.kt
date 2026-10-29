@@ -42,12 +42,11 @@ class WebFallbackTest {
     @Before
     fun setUp() {
         hilt.inject()
-        // Default settings (DuckDuckGo); the owner's choices are restored afterwards.
+        // Test baseline (DuckDuckGo); the owner's choices are restored afterwards.
         saved = kotlinx.coroutines.runBlocking { prefs.preferences.first() }
         kotlinx.coroutines.runBlocking {
             prefs.update {
-                com.ekquickfind.data.prefs
-                    .UserPreferences(hiddenResults = it.hiddenResults)
+                com.ekquickfind.app.testBaseline(it)
             }
         }
         Intents.init()

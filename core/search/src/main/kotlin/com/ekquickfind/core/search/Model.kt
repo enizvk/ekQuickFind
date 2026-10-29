@@ -20,6 +20,7 @@ enum class Section(
     QuickAnswers("Answer", 2.0f),
     Apps("Apps", 1.0f),
     Contacts("Contacts", 0.9f),
+    Calendar("Calendar", 0.85f),
     Settings("Settings", 0.85f),
     Files("Files", 0.8f),
     Web("Web", 0.5f),
@@ -70,6 +71,7 @@ enum class Glyph {
     Flashlight,
     History,
     Chat,
+    Calendar,
 }
 
 sealed interface ResultIcon {
@@ -116,6 +118,8 @@ data class ToggleSpec(
 /** The query as typed plus its normalised form. */
 data class Query(
     val raw: String,
+    /** Only the typed text as whole words counts: no partial words, typos, initials or scattered words. */
+    val exact: Boolean = false,
 ) {
     val normalized: String = TextNormalizer.normalize(raw)
     val isBlank: Boolean get() = normalized.isEmpty()

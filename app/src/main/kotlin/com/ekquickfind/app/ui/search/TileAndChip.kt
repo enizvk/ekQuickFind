@@ -1,7 +1,6 @@
 package com.ekquickfind.app.ui.search
 
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -80,13 +79,15 @@ internal fun ResultTile(
 ) {
     var menuOpen by remember { mutableStateOf(false) }
     val accent = MaterialTheme.colorScheme.primary
+    val exactHighlight = LocalSurfaceStyle.current.exactMatch
     val label =
         remember(
+            exactHighlight,
             result.title,
             highlightQuery,
             accent,
             result.emphasis,
-        ) { highlighted(result.title, highlightQuery, accent, result.emphasis) }
+        ) { highlighted(result.title, highlightQuery, accent, result.emphasis, exactHighlight) }
     Box(modifier) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -94,8 +95,8 @@ internal fun ResultTile(
             modifier =
                 Modifier
                     .fillMaxWidth()
+                    .activeHighlight(selected, cornerRadius = 16.dp)
                     .clip(RoundedCornerShape(16.dp))
-                    .then(if (selected) Modifier.border(2.dp, accent, RoundedCornerShape(16.dp)) else Modifier)
                     .semantics { this.selected = selected }
                     .resultGestures(result, menuActions, onAction) { menuOpen = true }
                     .padding(vertical = 8.dp, horizontal = 2.dp)
@@ -164,7 +165,6 @@ internal fun ResultChip(
     tagPrefix: String = "chip:",
 ) {
     var menuOpen by remember { mutableStateOf(false) }
-    val accent = MaterialTheme.colorScheme.primary
     Box {
         Surface(
             shape = CircleShape,
@@ -173,14 +173,16 @@ internal fun ResultChip(
             modifier =
                 Modifier
                     .clip(CircleShape)
-                    .then(if (selected) Modifier.border(2.dp, accent, CircleShape) else Modifier)
                     .semantics { this.selected = selected }
                     .resultGestures(result, menuActions, onAction) { menuOpen = true }
                     .testTag("$tagPrefix${result.id.value}"),
         ) {
             val pad = if (small) 4.dp else 6.dp
             Row(
-                Modifier.padding(start = pad, end = if (small) 10.dp else 14.dp, top = pad, bottom = pad),
+                // Inside the chip's background, so the tint shows on top of it.
+                Modifier
+                    .activeHighlight(selected, cornerRadius = PILL_CORNER)
+                    .padding(start = pad, end = if (small) 10.dp else 14.dp, top = pad, bottom = pad),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {

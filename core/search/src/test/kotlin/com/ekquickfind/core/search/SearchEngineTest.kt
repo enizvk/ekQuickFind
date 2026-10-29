@@ -188,7 +188,16 @@ class SearchEngineTest {
     fun `sections missing from a partial order keep their default place at the end`() {
         val config = EngineConfig(sectionOrder = listOf(Section.Web, Section.Files))
         assertEquals(
-            listOf(Section.Web, Section.Files, Section.QuickAnswers, Section.Apps, Section.Contacts, Section.Settings, Section.AskAi),
+            listOf(
+                Section.Web,
+                Section.Files,
+                Section.QuickAnswers,
+                Section.Apps,
+                Section.Contacts,
+                Section.Calendar,
+                Section.Settings,
+                Section.AskAi,
+            ),
             config.orderedSections,
         )
     }

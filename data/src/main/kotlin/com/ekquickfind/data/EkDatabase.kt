@@ -16,11 +16,12 @@ import com.ekquickfind.data.photos.PhotoTagRow
 
 @Database(
     entities = [AppLabelEntity::class, LaunchEvent::class, Pin::class, PhotoTagRow::class, PhotoScanRow::class],
-    version = 4,
+    version = 5,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3, spec = EkDatabase.DropRecentSearches::class),
         AutoMigration(from = 3, to = 4),
+        AutoMigration(from = 4, to = 5),
     ],
 )
 abstract class EkDatabase : RoomDatabase() {

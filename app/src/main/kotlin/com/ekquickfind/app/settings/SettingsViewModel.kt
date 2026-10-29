@@ -103,4 +103,15 @@ class SettingsViewModel
         fun unhide(id: String) = viewModelScope.launch { prefs.unhide(id) }
 
         fun clearHistory() = viewModelScope.launch { history.clear() }
+
+        /** Photo tags are off by default, so a reset also stops tagging and clears the index, like turning them off. */
+        fun resetSettings() =
+            viewModelScope.launch {
+                val hadPhotoTags = prefs.preferences.first().photoTags
+                prefs.update { it.resetToDefaults() }
+                if (hadPhotoTags) {
+                    PhotoTagWorker.stop(context)
+                    photoTags.clear()
+                }
+            }
     }

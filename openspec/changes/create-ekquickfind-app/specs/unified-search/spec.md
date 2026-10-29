@@ -54,6 +54,10 @@ The system SHALL match results by prefix, word-initial letters, substring and sm
 - **WHEN** the user types "vsc"
 - **THEN** "Visual Studio Code" appears
 
+#### Scenario: Exact match
+- **WHEN** the user turns on the exact-match toggle (a quote-mark button in the search bar) and types "eren"
+- **THEN** only names with "eren" as a whole word appear ("Eren Yılmaz", "Ali Eren", "eren_beach.jpg"), not longer words that contain it ("Erenay", "Reference") or initials and typo matches ("gm" no longer finds Google Maps or Gmail); case and accents are still ignored, and the toggle stays as set for the next search
+
 #### Scenario: Two-letter initials
 - **WHEN** the user types "gm"
 - **THEN** "Google Maps" appears (with G and M highlighted) alongside "Gmail", and "Pigment" does not

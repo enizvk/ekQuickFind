@@ -38,13 +38,16 @@ class AppsProvider(
                     if (id in hiddenIds) return@mapNotNull null
                     // Package names are a power-user path; rank them just below a label match.
                     val score =
-                        listOfNotNull(QueryMatcher.score(q, app.label), QueryMatcher.score(q, app.packageName)?.times(0.9f)).maxOrNull()
+                        listOfNotNull(
+                            QueryMatcher.score(q, app.label, query.exact),
+                            QueryMatcher.score(q, app.packageName, query.exact)?.times(0.9f),
+                        ).maxOrNull()
                             ?: return@mapNotNull null
                     appResult(app.entry, id, score)
                 }
             val shortcuts =
                 ready.shortcuts.mapNotNull { s ->
-                    val score = QueryMatcher.score(q, s.label) ?: return@mapNotNull null
+                    val score = QueryMatcher.score(q, s.label, query.exact) ?: return@mapNotNull null
                     shortcutResult(s.entry, score * 0.9f)
                 }
             emit((apps + shortcuts).sortedByDescending { it.score }.take(MAX_RESULTS))

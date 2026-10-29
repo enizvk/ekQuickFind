@@ -15,6 +15,8 @@ data class LaunchEvent(
     val resultId: String,
     val providerId: String,
     val at: Long,
+    /** Headphones or car connected at the time, for suggestions; null for the phone speaker (and older launches). */
+    val audioDevice: String? = null,
 )
 
 @Entity(tableName = "pin")
@@ -49,6 +51,9 @@ interface HistoryDao {
 
     @Query("SELECT resultId, providerId, MAX(at) AS lastAt FROM launch_event GROUP BY resultId ORDER BY lastAt DESC LIMIT :limit")
     fun recentResults(limit: Int): Flow<List<RecentResult>>
+
+    @Query("SELECT * FROM launch_event WHERE at >= :since ORDER BY at")
+    suspend fun launchesSince(since: Long): List<LaunchEvent>
 
     @Query("DELETE FROM launch_event WHERE at < :cutoff")
     suspend fun pruneLaunchesBefore(cutoff: Long)

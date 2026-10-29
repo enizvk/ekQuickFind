@@ -35,7 +35,8 @@ class HistoryRepositoryTest {
             .allowMainThreadQueries()
             .build()
     private var now = 1_000L * 86_400_000L
-    private val history = HistoryRepository(db.history()) { now }
+    private var device: String? = null
+    private val history = HistoryRepository(db.history(), audioDevice = { device }) { now }
 
     @After
     fun tearDown() = db.close()
@@ -144,5 +145,26 @@ class HistoryRepositoryTest {
             history.recordLaunch(app("New", 0.5f))
             history.prune()
             assertEquals(setOf(ResultId("apps:New")), history.snapshot().launches.keys)
+        }
+
+    @Test
+    fun eachLaunchRemembersTheConnectedAudioDevice() =
+        runTest {
+            device = "My Car"
+            history.recordLaunch(app("Music", 0.5f))
+            device = null
+            now += 1_000
+            history.recordLaunch(app("Maps", 0.5f))
+            val launches = history.launchesSince(0)
+            assertEquals(listOf("apps:Music" to "My Car", "apps:Maps" to null), launches.map { it.resultId to it.audioDevice })
+        }
+
+    @Test
+    fun launchesSinceLeavesOutOlderOnes() =
+        runTest {
+            history.recordLaunch(app("Old", 0.5f))
+            now += 10_000
+            history.recordLaunch(app("New", 0.5f))
+            assertEquals(listOf("apps:New"), history.launchesSince(now - 5_000).map { it.resultId })
         }
 }

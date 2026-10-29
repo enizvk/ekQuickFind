@@ -49,7 +49,7 @@ class ContactsProvider(
             val q = query.normalized
             val digits = query.raw.filter(Char::isDigit)
             val rows = withContext(io) { source.query(query.raw.trim()) }
-            emit(rows.mapNotNull { toResult(it, q, digits) }.sortedByDescending { it.score })
+            emit(rows.mapNotNull { toResult(it, q, digits, query.exact) }.sortedByDescending { it.score })
         }
 
     override suspend fun resolve(id: ResultId): SearchResult? {
@@ -63,14 +63,15 @@ class ContactsProvider(
         row: ContactRow,
         q: String,
         digits: String,
+        exact: Boolean = false,
     ): SearchResult? {
         val phoneHit = row.phones.firstOrNull { digits.length >= 3 && digits in it.number.filter(Char::isDigit) }
         val textFields = listOfNotNull(row.displayName, row.nickname, row.organization) + row.emails
-        val textScore = QueryMatcher.bestScore(q, textFields.map(::MatchTarget))
+        val textScore = QueryMatcher.bestScore(q, textFields.map(::MatchTarget), exact)
         val base = listOfNotNull(textScore, PHONE_SCORE.takeIf { phoneHit != null }).maxOrNull() ?: return null
         // Starred breaks ties without jumping a better text match.
         val score = base + if (row.starred) STARRED_BONUS else 0f
-        val orgHit = row.organization?.let { QueryMatcher.score(q, MatchTarget(it)) } != null
+        val orgHit = row.organization?.let { QueryMatcher.score(q, MatchTarget(it), exact) } != null
         val subtitle =
             phoneHit?.number
                 ?: row.organization.takeIf { orgHit }

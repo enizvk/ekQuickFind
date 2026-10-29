@@ -39,7 +39,7 @@ class ExcludedAppsUiTest {
     fun setUp() {
         hilt.inject()
         saved = runBlocking { prefs.preferences.first() }
-        runBlocking { prefs.update { UserPreferences(hiddenResults = it.hiddenResults) } }
+        runBlocking { prefs.update { com.ekquickfind.app.testBaseline(it) } }
         SearchLauncher.launch()
         compose.waitUntilAtLeastOneExists(hasTestTag("query"), 5_000)
     }

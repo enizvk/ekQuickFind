@@ -4,7 +4,6 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -69,13 +68,15 @@ fun ResultRow(
 ) {
     var menuOpen by remember { mutableStateOf(false) }
     val accent = MaterialTheme.colorScheme.primary
+    val exactHighlight = LocalSurfaceStyle.current.exactMatch
     val title =
         remember(
+            exactHighlight,
             result.title,
             highlightQuery,
             accent,
             result.emphasis,
-        ) { highlighted(result.title, highlightQuery, accent, result.emphasis) }
+        ) { highlighted(result.title, highlightQuery, accent, result.emphasis, exactHighlight) }
     val haptics = LocalHapticFeedback.current
     val style = LocalSurfaceStyle.current
     val compact = dense && !prominent
@@ -97,8 +98,8 @@ fun ResultRow(
             modifier =
                 Modifier
                     .fillMaxWidth()
+                    .activeHighlight(selected, cornerRadius = 20.dp)
                     .clip(RoundedCornerShape(20.dp))
-                    .then(if (selected) Modifier.border(2.dp, accent, RoundedCornerShape(20.dp)) else Modifier)
                     .semantics { this.selected = selected }
                     .combinedClickable(
                         onClick = { onAction(result.primaryAction) },
@@ -192,13 +193,14 @@ internal fun highlighted(
     query: String,
     color: androidx.compose.ui.graphics.Color,
     emphasis: Emphasis = Emphasis.Match,
+    exact: Boolean = false,
 ): AnnotatedString {
     val target = MatchTarget(title)
     val ranges =
         when {
             query.isEmpty() -> emptyList()
             emphasis == Emphasis.Completion -> QueryMatcher.completion(query, target)
-            else -> QueryMatcher.highlight(query, target)
+            else -> QueryMatcher.highlight(query, target, exact)
         }
     return buildAnnotatedString {
         append(title)

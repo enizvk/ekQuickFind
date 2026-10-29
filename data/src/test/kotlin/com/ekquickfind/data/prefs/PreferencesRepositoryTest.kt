@@ -23,7 +23,7 @@ class PreferencesRepositoryTest {
     fun defaultsArePrivacyFriendly() =
         runTest {
             val prefs = repository().preferences.first()
-            assertEquals(SearchEngineChoice.DuckDuckGo, prefs.searchEngine)
+            assertEquals(SearchEngineChoice.Google, prefs.searchEngine)
             assertTrue(prefs.webSuggestions)
             assertFalse(prefs.backupHistory)
             assertEquals(ThemeMode.System, prefs.theme)

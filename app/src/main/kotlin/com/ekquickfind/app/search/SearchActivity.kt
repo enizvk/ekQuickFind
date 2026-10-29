@@ -37,6 +37,7 @@ import com.ekquickfind.app.settings.SettingsViewModel
 import com.ekquickfind.app.shortcuts.ShortcutsPublisher
 import com.ekquickfind.app.ui.search.SearchSurface
 import com.ekquickfind.app.ui.search.ZeroQueryContent
+import com.ekquickfind.app.ui.search.clipboardHasText
 import com.ekquickfind.app.ui.settings.ExcludedAppsScreen
 import com.ekquickfind.app.ui.settings.SettingsActions
 import com.ekquickfind.app.ui.settings.SettingsPage
@@ -185,6 +186,7 @@ class SearchActivity : ComponentActivity() {
                     openExcludedApps = { nav.navigate(EXCLUDED_APPS) },
                     setPhotoTags = { settings.setPhotoTags(it) },
                     refreshPhotoCount = { settings.refreshPhotoCount() },
+                    resetSettings = { settings.resetSettings() },
                 ),
             onBack = { nav.popBackStack() },
             entryPoints = {
@@ -210,7 +212,12 @@ class SearchActivity : ComponentActivity() {
     ) {
         val query by viewModel.query.collectAsStateWithLifecycle()
         val state by viewModel.state.collectAsStateWithLifecycle()
-        val zeroQuery by viewModel.zeroQueryState.collectAsStateWithLifecycle()
+        val zeroQueryAll by viewModel.zeroQueryState.collectAsStateWithLifecycle()
+        val prefs by viewModel.preferences.collectAsStateWithLifecycle()
+        val zeroQuery = remember(zeroQueryAll, prefs.recentsCount) { zeroQueryAll.limitRecents(prefs.recentsCount) }
+        // Checked once per open; only the clip's description is looked at, so Android shows no "pasted" message.
+        val context = androidx.compose.ui.platform.LocalContext.current
+        val showClipboard = remember(prefs.clipboardChip) { prefs.clipboardChip && clipboardHasText(context) }
         val pinned by viewModel.pinnedIds.collectAsStateWithLifecycle()
         val style = LocalSurfaceStyle.current
         val view = LocalView.current
@@ -232,7 +239,7 @@ class SearchActivity : ComponentActivity() {
             SearchSurface(
                 query = query,
                 onQueryChange = viewModel::onQueryChange,
-                state = state,
+                engineState = state,
                 onSubmit = { selected -> run(selected, selected.primaryAction) },
                 onAction = { result, action -> run(result, action) },
                 onDismiss = ::dismiss,
@@ -240,14 +247,16 @@ class SearchActivity : ComponentActivity() {
                 expandedLayout = widthClass != WindowWidthSizeClass.Compact,
                 blurAvailable = blurAvailable,
                 onOpenSettings = openSettings,
+                onToggleExact = if (style.exactMatchButton) ({ viewModel.setExactMatch(!style.exactMatch) }) else null,
                 barModifier = barModifier,
                 // Recent items only; pinned ones already have their own section.
                 recentStrip = zeroQuery.recent,
                 zeroQueryContent =
-                    if (zeroQuery.showsPanel(recentsInStrip = style.recentsStrip)) {
+                    if (zeroQuery.showsPanel(recentsInStrip = style.recentsStrip) || showClipboard) {
                         {
                             ZeroQueryContent(
                                 state = zeroQuery,
+                                showClipboard = showClipboard,
                                 menuActions = { result -> pinToggle(result, pinned) },
                                 onAction = { result, action -> run(result, action) },
                                 onQuery = viewModel::onQueryChange,

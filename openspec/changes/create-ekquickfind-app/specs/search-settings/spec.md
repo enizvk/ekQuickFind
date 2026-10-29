@@ -87,7 +87,11 @@ The user SHALL be able to choose how the screen behind the search surface looks:
 - **THEN** the surface falls back to a dimmed solid background and returns to blur automatically once blur is available again
 
 ### Requirement: Result appearance is configurable
-The user SHALL be able to choose result icon size (Small, Medium, Large), list density (Compact, Comfortable) and how many results each section shows before "More" (3, 4, 6 or 8).
+The user SHALL be able to choose result icon size (Small, Medium, Large), list density (Compact, Comfortable), and how many results each section shows before "More" (3, 4, 6 or 8), on the Search sources page below the sources and the result order. A Text panel on Look and feel SHALL offer a text size slider (small A to big A, 80 % to 160 % in steps of 10, default 100 %; it scales text on the search screen on top of Android's font size), a font list for result text where each name is shown in its own font (Default, Serif · Lora, Mono · JetBrains Mono, Condensed · Roboto Condensed, Rounded · Nunito; bundled with the app so a system font style can't replace them; the search bar keeps the theme font) and a weight (Light, Regular, Medium, Bold; Regular keeps the theme's mix), with sample results showing all three.
+
+#### Scenario: Larger text
+- **WHEN** the user picks Text size Larger
+- **THEN** result titles, subtitles, section headings and the search bar text on the search screen get bigger immediately; the settings screen keeps its size
 
 #### Scenario: Large icons
 - **WHEN** the user picks Large icons
@@ -96,6 +100,26 @@ The user SHALL be able to choose result icon size (Small, Medium, Large), list d
 #### Scenario: Results per section
 - **WHEN** the user sets results per section to 6
 - **THEN** sections show up to 6 rows before the "More" control
+
+### Requirement: Active item and search bar effects
+Look and feel SHALL group these options in two panels, each with a live preview under its own choices. Every preview SHALL look unlike a control: a "Preview" label with an eye icon (and Play where there's an animation) over a coloured backdrop, taking no taps and read by screen readers as one "Preview".
+
+- **Search bar**: position, recent items strip, "Recent items shown" (a number field, 1 to 20, default 5; it limits recent items before anything is typed, in the list and the strip; other values show as an error and aren't saved), "Exact match button" (on by default; hiding it also turns exact match off, so searches can't stay strict with no way back), and "Animation when search opens" (on by default) with its type: Light sweep (a point of light runs along the border about one and a half times, about 3 seconds), Colour pulse (a soft multicolour glow breathes twice, about 3.6 seconds), Shimmer ring (a multicolour outline turns slowly with a faint halo), Breathe (one slow accent-colour breath) or Twin lights (default; two lights run round the border half a turn apart). It plays once each time search opens and never while typing. The preview bar under the choices plays it when the choice changes or on Play.
+- **Active item**: Top result (In its section, default: it stays first in its own section's rows, grid or chips, selected and marked; a best match alone in its section brings that section first; or Featured: the best match as a big card above the sections), Selected result by the search bar, Style (Tinted card default with a soft accent gradient fill, soft accent edge and soft glow; Soft glow with an even thin accent line and halo; Gradient with a thin accent-to-pink line), and "Animation when it becomes active" (on by default) with its type: Settle (default; the mark fades and settles in), Lift (the item rises a touch and settles back) or a border glow matching a search bar type (Light sweep, Colour pulse, Shimmer ring, Breathe, Twin lights). The preview is a small results panel laid out by Top result and Selected result by the search bar, and replays the animation when any of them changes or on Play.
+
+The mark SHALL be equally thick all the way round on rows, tiles, chips and cards; on the top card and the selected slot the card itself is the mark, so its rounded clip never trims it. The two animations turn off separately; Reduce motion turns both off, and the mark then just moves without motion.
+
+#### Scenario: Light sweep on open
+- **WHEN** the search bar animation is on and the user opens search
+- **THEN** a light runs along the search bar's border for about 3 seconds and fades, then the bar looks as usual
+
+#### Scenario: Bar animation off, item animation on
+- **WHEN** the user turns "Animation when search opens" off
+- **THEN** search opens without the bar glow, its type choices and preview are hidden, and the active item still animates
+
+#### Scenario: Preview follows the layout
+- **WHEN** the user turns on "Selected result by the search bar"
+- **THEN** the active item preview shows the best-match card just above the search bar instead of on top
 
 ### Requirement: Surface position is configurable
 The user SHALL be able to place the search surface at the bottom (above the keyboard, default) or at the top of the screen.
@@ -165,7 +189,7 @@ The user SHALL be able to reorder result sections (Answer, Apps, Contacts, Setti
 - **THEN** sections return to the default order Answer, Apps, Contacts, Settings, Files, Web
 
 ### Requirement: Section layout is selectable per section
-The user SHALL be able to choose, per section, whether results show as rows, a grid of small icons, or compact chips. Defaults: Apps as grid, Recent as chips, everything else as rows. Web results always show as a compact link list with small icons, so the Web section has no layout choice.
+The user SHALL be able to choose, per section, whether results show as rows, a grid of small icons, or compact chips. Defaults: Apps as grid, Settings and Recent as chips, everything else as rows. Web results always show as a compact link list with small icons, so the Web section has no layout choice.
 
 #### Scenario: Settings as chips
 - **WHEN** the user sets the Settings section layout to Chips and types "display"
@@ -213,8 +237,33 @@ Settings SHALL end with an About panel showing the project's GitHub page as a li
 - **THEN** the About panel shows the project's GitHub page (`github.com/<owner>/<repo>` from `ekquickfind.githubRepo`), which opens in the browser when tapped, and the version name (for example "0.1.0") without the build number
 
 ### Requirement: Settings open on a menu of pages
-Settings SHALL open on a menu (like the system Settings app) of pages, each with an icon, title, short summary and an arrow: Search sources, Web and AI, Results, Look and feel, Keyboard and feedback, Ways to open, Privacy, Updates (direct version only) and About. Each page groups its options into rounded panels in a container colour a clear step from the page background, under icon headings; a panel named like its page shows no heading. Back returns from a page to the menu, and from the menu to search.
+Settings SHALL open on a menu (like the system Settings app) of pages, each with an icon, title, short summary and an arrow: Search sources, Web and AI, Look and feel, Keyboard and feedback, Ways to open, Privacy and App (version, GitHub page, the updates panel in the direct version, and reset). Each page groups its options into rounded panels in a container colour a clear step from the page background, under icon headings; a panel named like its page shows no heading. Back returns from a page to the menu, and from the menu to search.
 
 #### Scenario: Open a page
 - **WHEN** the user opens settings and taps "Look and feel"
 - **THEN** a page titled "Look and feel" shows the Background, Appearance and Search bar panels, and Back returns to the menu
+
+#### Scenario: Font with a custom system font style
+- **WHEN** the phone uses a system font style (for example Samsung's) and the user picks Mono
+- **THEN** results and the sample switch to JetBrains Mono anyway, because the font ships inside the app
+
+### Requirement: Settings can be reset to defaults
+The App page SHALL end with a Reset panel whose "Reset all settings" button, after a confirmation dialog, puts every setting back to its install default. History, pins, hidden results and excluded apps SHALL stay. Photo tags go back to off, so tagging stops and the tag index is cleared, as when the user turns them off; the floating button goes away as its setting returns to off.
+
+#### Scenario: Reset keeps the user's data
+- **WHEN** the user has a dark theme, larger text and a hidden result, taps "Reset all settings" and confirms
+- **THEN** the theme follows the system again, text is 100 %, and the hidden result is still hidden
+
+### Requirement: Floating button is on by default
+The floating button SHALL be on in a fresh install. Until "Display over other apps" is granted, no button appears and its settings row shows "Needs Display over other apps" with an Allow button.
+
+### Requirement: Before you type
+A "Before you type" panel on Search sources SHALL offer three switches, all on by default:
+
+- **Smart suggestions**: the Suggested row first lists what the user usually opens at this time of day (and kind of day), or with the headphones or car that are connected now, learned on the phone from their own launch history of the last 30 days; usage-based apps fill the rest. Each launch keeps the name of the connected audio device (read without any permission); one-off launches don't count.
+- **Next up**: the calendar event running now or starting in the next 12 hours (all-day events left out) shows first, when calendar search is on and allowed.
+- **Clipboard**: a Clipboard chip appears when text (not marked sensitive) was copied. Only tapping it reads the clipboard, so Android's "pasted from your clipboard" message never appears on open; it then shows the text with Search, Open link (for a web address), Call (for a phone number) and Share. Nothing is kept.
+
+#### Scenario: The car playlist
+- **WHEN** the user has opened a music app a few times with "My Car" connected, and opens search with the car connected again
+- **THEN** that music app is the first suggestion, at any time of day

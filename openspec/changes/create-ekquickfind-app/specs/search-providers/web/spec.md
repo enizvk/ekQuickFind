@@ -25,7 +25,7 @@ When enabled, the provider SHALL fetch up to five suggestions from the chosen se
 - **THEN** the Web section is hidden and only the web fallback result remains, with no error shown
 
 ### Requirement: Search engine is selectable
-The user SHALL be able to choose among DuckDuckGo (default), Google, Bing, Brave and a custom URL template.
+The user SHALL be able to choose among Google (default), DuckDuckGo, Bing, Brave and a custom URL template.
 
 #### Scenario: Custom engine
 - **WHEN** the user enters a custom search template containing "%s"

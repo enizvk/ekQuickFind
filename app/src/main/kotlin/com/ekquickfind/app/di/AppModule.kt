@@ -2,6 +2,10 @@ package com.ekquickfind.app.di
 
 import android.content.Context
 import com.ekquickfind.app.BuildConfig
+import com.ekquickfind.app.search.AudioOutputs
+import com.ekquickfind.app.search.LaunchContext
+import com.ekquickfind.app.search.PastLaunch
+import com.ekquickfind.app.search.SmartSuggestions
 import com.ekquickfind.app.search.UsageSuggestions
 import com.ekquickfind.app.search.ZeroQuerySource
 import com.ekquickfind.app.search.engineConfigFor
@@ -31,6 +35,8 @@ import com.ekquickfind.providers.apps.AppsProvider
 import com.ekquickfind.providers.apps.AppsSource
 import com.ekquickfind.providers.apps.LauncherAppsSource
 import com.ekquickfind.providers.apps.RoomAppLabelCache
+import com.ekquickfind.providers.calendar.CalendarProvider
+import com.ekquickfind.providers.calendar.ContentResolverCalendarSource
 import com.ekquickfind.providers.contacts.ContactsProvider
 import com.ekquickfind.providers.contacts.ContentResolverContactsSource
 import com.ekquickfind.providers.files.FileAccess
@@ -219,6 +225,21 @@ object ProvidersModule {
 
     @Provides
     @Singleton
+    fun calendarProvider(
+        @ApplicationContext context: Context,
+    ): CalendarProvider =
+        CalendarProvider(
+            ContentResolverCalendarSource(context.contentResolver),
+            PermissionChecker.of(context),
+            Dispatchers.IO,
+        )
+
+    @Provides
+    @IntoSet
+    fun calendar(provider: CalendarProvider): SearchProvider = provider
+
+    @Provides
+    @Singleton
     fun appsProvider(
         index: AppIndex,
         hidden: HiddenResults,
@@ -237,7 +258,10 @@ const val GRID_COLUMNS = 5
 object EngineModule {
     @Provides
     @Singleton
-    fun history(db: EkDatabase): HistoryRepository = HistoryRepository(db.history())
+    fun history(
+        db: EkDatabase,
+        @ApplicationContext context: Context,
+    ): HistoryRepository = HistoryRepository(db.history(), audioDevice = AudioOutputs(context)::current)
 
     @Provides
     fun signals(history: HistoryRepository): SignalsSource = history
@@ -252,16 +276,37 @@ object EngineModule {
         history: HistoryRepository,
         resolvers: Map<ProviderId, @JvmSuppressWildcards ResultResolver>,
         apps: AppsProvider,
+        calendar: CalendarProvider,
+        prefs: PreferencesRepository,
         @ApplicationContext context: Context,
     ): ZeroQuerySource {
         val usage = UsageSuggestions(context)
+        val audio = AudioOutputs(context)
         return ZeroQuerySource(
             history = history,
             resolvers = resolvers,
             apps = apps,
             suggestedPackages = { usage.topPackages(it) },
+            smartPicks = { limit ->
+                if (!prefs.preferences.first().smartSuggestions) {
+                    emptyList()
+                } else {
+                    val now = System.currentTimeMillis()
+                    val past =
+                        history.launchesSince(now - SMART_HISTORY_MS).map {
+                            PastLaunch(it.providerId, it.resultId, it.at, LaunchContext.at(it.at, it.audioDevice))
+                        }
+                    SmartSuggestions.rank(past, LaunchContext.at(now, audio.current()), now, limit)
+                }
+            },
+            nextUp = {
+                val p = prefs.preferences.first()
+                if (p.nextUp && CalendarProvider.ID.value !in p.disabledProviders) calendar.nextUp() else null
+            },
         )
     }
+
+    private const val SMART_HISTORY_MS = 30L * 24 * 60 * 60 * 1000
 
     @Provides
     fun engine(

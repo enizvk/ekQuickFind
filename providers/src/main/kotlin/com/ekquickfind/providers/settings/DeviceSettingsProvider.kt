@@ -150,14 +150,14 @@ class DeviceSettingsProvider(
             val q = query.normalized
             val toggleRows =
                 toggleIndex.mapNotNull { (toggle, targets) ->
-                    val score = QueryMatcher.bestScore(q, targets) ?: return@mapNotNull null
+                    val score = QueryMatcher.bestScore(q, targets, query.exact) ?: return@mapNotNull null
                     val state = toggles.state(toggle) ?: return@mapNotNull null
                     toggleRow(toggle, state, (score + TOGGLE_BONUS).coerceAtMost(1f))
                 }
             val screens =
                 index.mapNotNull { item ->
-                    val titleScore = QueryMatcher.score(q, item.title)
-                    val keywordScore = QueryMatcher.bestScore(q, item.keywords)?.times(KEYWORD_WEIGHT)
+                    val titleScore = QueryMatcher.score(q, item.title, query.exact)
+                    val keywordScore = QueryMatcher.bestScore(q, item.keywords, query.exact)?.times(KEYWORD_WEIGHT)
                     val score = listOfNotNull(titleScore, keywordScore).maxOrNull() ?: return@mapNotNull null
                     screenRow(item.entry, score)
                 }

@@ -56,10 +56,12 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -71,6 +73,7 @@ import com.ekquickfind.core.search.ResultId
 import com.ekquickfind.core.search.SearchResult
 import com.ekquickfind.core.search.SearchState
 import com.ekquickfind.core.search.Section
+import com.ekquickfind.core.search.SectionResults
 import com.ekquickfind.data.prefs.BackgroundStyle
 import com.ekquickfind.data.prefs.SurfacePosition
 import kotlinx.coroutines.CancellationException
@@ -86,7 +89,7 @@ fun interface MenuActions {
 fun SearchSurface(
     query: String,
     onQueryChange: (String) -> Unit,
-    state: SearchState,
+    engineState: SearchState,
     /** Called with the selected result (the top result unless arrow keys moved it). */
     onSubmit: (SearchResult) -> Unit,
     onAction: (SearchResult, Action) -> Unit,
@@ -97,6 +100,8 @@ fun SearchSurface(
     /** False when cross-window blur is off (power saving and similar); the scrim compensates. */
     blurAvailable: Boolean = true,
     onOpenSettings: (() -> Unit)? = null,
+    /** Flips exact match from the bar; null hides the toggle. */
+    onToggleExact: (() -> Unit)? = null,
     /** Lets the caller attach a shared-element transition to the query bar. */
     barModifier: Modifier = Modifier,
     /** Recently opened results for the optional strip next to the bar. */
@@ -105,6 +110,7 @@ fun SearchSurface(
     zeroQueryContent: (@Composable () -> Unit)? = { ZeroQueryHint() },
 ) {
     val style = LocalSurfaceStyle.current
+    val state = remember(engineState, style.inlineTop) { if (style.inlineTop) engineState.withTopInline() else engineState }
     val keyboard = LocalSoftwareKeyboardController.current
     val focus = remember { FocusRequester() }
     var backProgress by remember { mutableFloatStateOf(0f) }
@@ -117,7 +123,8 @@ fun SearchSurface(
     // Selection follows the result itself, so late-arriving results don't yank it back to the top.
     var selectedId by remember(state.query.raw) { mutableStateOf<ResultId?>(null) }
     val rows = remember(state, expanded.toMap()) { visibleRows(state, expanded) }
-    val selected = rows.indexOfFirst { it.id == selectedId }.coerceAtLeast(0)
+    // Until arrow keys move it, the best match is selected, wherever it's shown.
+    val selected = rows.indexOfFirst { it.id == (selectedId ?: engineState.top?.result?.id) }.coerceAtLeast(0)
     val atTop = style.position == SurfacePosition.Top
 
     val dismiss: () -> Unit = {
@@ -184,7 +191,12 @@ fun SearchSurface(
                 slideOutVertically(tween(EXIT_MS)) { if (atTop) -it / 8 else it / 8 }
         }
 
-    CompositionLocalProvider(LocalBlurAvailable provides blurAvailable) {
+    // Text size scales on top of Android's font size; sp-based text and layout grow with it.
+    val density = LocalDensity.current
+    CompositionLocalProvider(
+        LocalBlurAvailable provides blurAvailable,
+        LocalDensity provides Density(density.density, density.fontScale * style.textScale),
+    ) {
         Box(
             modifier
                 .fillMaxSize()
@@ -240,10 +252,12 @@ fun SearchSurface(
                             focus = focus,
                             onOpenSettings = onOpenSettings,
                             modifier = barModifier,
+                            exactMatch = style.exactMatch,
+                            onToggleExact = onToggleExact,
                         )
                     }
                     val strip = @Composable {
-                        if (style.recentsStrip && recentStrip.isNotEmpty()) RecentsStrip(recentStrip, menuActions, onAction)
+                        if (style.recentsStrip && recentStrip.isNotEmpty()) ResultsFont { RecentsStrip(recentStrip, menuActions, onAction) }
                     }
                     surfaceParts(barAtTop = atTop, stripOnTop = style.stripOnTop).forEach { part ->
                         when (part) {
@@ -252,55 +266,57 @@ fun SearchSurface(
                             SurfacePart.Panel ->
                                 if (!state.query.isBlank || zeroQueryContent != null) {
                                     Panel(Modifier.weight(1f, fill = false)) {
-                                        if (state.query.isBlank) {
-                                            Box(Modifier.padding(8.dp)) { zeroQueryContent?.invoke() }
-                                        } else {
-                                            val slot = rows.getOrNull(selected)?.takeIf { style.selectedAtBottom }
-                                            Column {
-                                                // Without a cue, results hidden below the fold (often under the selected slot) go unnoticed.
-                                                val moreBelow by remember { derivedStateOf { listState.canScrollForward } }
-                                                Box(Modifier.weight(1f, fill = false)) {
-                                                    ResultList(
-                                                        state = state,
-                                                        listState = listState,
-                                                        expanded = expanded,
-                                                        selectedId = rows.getOrNull(selected)?.id,
-                                                        menuActions = menuActions,
-                                                        onAction = onAction,
-                                                        modifier = Modifier.nestedScroll(gestures).fadeBottomEdge(moreBelow),
-                                                        slotId = slot?.id,
-                                                    )
-                                                }
-                                                val belowLabel by remember(state.sections) {
-                                                    derivedStateOf {
-                                                        val current =
-                                                            listState.layoutInfo.visibleItemsInfo
-                                                                .lastOrNull()
-                                                                ?.contentType as? Section
-                                                        moreBelowLabel(state.sections.map { it.section.title }, current?.title)
+                                        ResultsFont {
+                                            if (state.query.isBlank) {
+                                                Box(Modifier.padding(8.dp)) { zeroQueryContent?.invoke() }
+                                            } else {
+                                                val slot = rows.getOrNull(selected)?.takeIf { style.selectedAtBottom }
+                                                Column {
+                                                    // Without a cue, results hidden below the fold (often under the selected slot) go unnoticed.
+                                                    val moreBelow by remember { derivedStateOf { listState.canScrollForward } }
+                                                    Box(Modifier.weight(1f, fill = false)) {
+                                                        ResultList(
+                                                            state = state,
+                                                            listState = listState,
+                                                            expanded = expanded,
+                                                            selectedId = rows.getOrNull(selected)?.id,
+                                                            menuActions = menuActions,
+                                                            onAction = onAction,
+                                                            modifier = Modifier.nestedScroll(gestures).fadeBottomEdge(moreBelow),
+                                                            slotId = slot?.id,
+                                                        )
                                                     }
-                                                }
-                                                MoreBelowBar(
-                                                    visible = moreBelow,
-                                                    label = belowLabel,
-                                                    onClick = {
-                                                        keyboard?.hide()
-                                                        scope.launch {
-                                                            listState.animateScrollBy(
-                                                                listState.layoutInfo.viewportSize.height * 0.8f,
-                                                            )
+                                                    val belowLabel by remember(state.sections) {
+                                                        derivedStateOf {
+                                                            val current =
+                                                                listState.layoutInfo.visibleItemsInfo
+                                                                    .lastOrNull()
+                                                                    ?.contentType as? Section
+                                                            moreBelowLabel(state.sections.map { it.section.title }, current?.title)
                                                         }
-                                                    },
-                                                )
-                                                // A scroll container that never moves, so swipes on the slot reach the same gestures as the list.
-                                                slot?.let {
-                                                    SelectedSlot(
-                                                        it,
-                                                        menuActions,
-                                                        onAction,
-                                                        state.query.normalized,
-                                                        Modifier.nestedScroll(gestures).verticalScroll(rememberScrollState()),
+                                                    }
+                                                    MoreBelowBar(
+                                                        visible = moreBelow,
+                                                        label = belowLabel,
+                                                        onClick = {
+                                                            keyboard?.hide()
+                                                            scope.launch {
+                                                                listState.animateScrollBy(
+                                                                    listState.layoutInfo.viewportSize.height * 0.8f,
+                                                                )
+                                                            }
+                                                        },
                                                     )
+                                                    // A scroll container that never moves, so swipes on the slot reach the same gestures as the list.
+                                                    slot?.let {
+                                                        SelectedSlot(
+                                                            it,
+                                                            menuActions,
+                                                            onAction,
+                                                            state.query.normalized,
+                                                            Modifier.nestedScroll(gestures).verticalScroll(rememberScrollState()),
+                                                        )
+                                                    }
                                                 }
                                             }
                                         }
@@ -350,6 +366,22 @@ fun Panel(
         modifier = modifier.testTag("panel"),
         content = content,
     )
+}
+
+/**
+ * The top result put back at the front of its own section, for the "in its section" layout. A top result whose
+ * section has nothing else gets that section first, since it holds the best match.
+ */
+internal fun SearchState.withTopInline(): SearchState {
+    val best = top ?: return this
+    val home = sections.indexOfFirst { it.section == best.result.section }
+    val regrouped =
+        if (home >= 0) {
+            sections.mapIndexed { i, s -> if (i == home) s.copy(items = listOf(best) + s.items) else s }
+        } else {
+            listOf(SectionResults(best.result.section, listOf(best), cap = 1)) + sections
+        }
+    return copy(top = null, sections = regrouped)
 }
 
 /** Rows in display order, used for keyboard selection: top result first, then visible section items. */

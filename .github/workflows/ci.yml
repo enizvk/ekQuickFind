@@ -4,6 +4,8 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Adds "Run workflow" in the Actions tab; the startup benchmark only runs that way.
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -36,6 +38,8 @@ jobs:
 
   startup-benchmark:
     name: Startup regression (Android 17 emulator)
+    # The emulator run is slow and flaky on hosted runners; run it by hand from the Actions tab.
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     needs: checks
     steps:

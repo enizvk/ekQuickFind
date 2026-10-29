@@ -472,6 +472,22 @@ class SettingsFlowTest {
         }
     }
 
+    @Test
+    fun anOpenClipboardPaneShowsAClipCopiedAfterIt() {
+        val clipboard = context.getSystemService(android.content.ClipboardManager::class.java)
+
+        fun copy(text: String) =
+            InstrumentationRegistry.getInstrumentation().runOnMainSync {
+                clipboard.setPrimaryClip(android.content.ClipData.newPlainText("test", text))
+            }
+        copy("first clip")
+        compose.waitUntil(3_000) { exists("clipboard-chip") }
+        compose.onNodeWithTag("clipboard-chip", useUnmergedTree = true).performClick()
+        compose.waitUntilAtLeastOneExists(hasText("first clip"), 3_000)
+        copy("second clip")
+        compose.waitUntilAtLeastOneExists(hasText("second clip"), 3_000)
+    }
+
     // Exact match toggle
 
     @Test

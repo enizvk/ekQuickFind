@@ -35,6 +35,7 @@ import coil3.SingletonImageLoader
 import com.ekquickfind.app.icons.EkImageLoader
 import com.ekquickfind.app.settings.SettingsViewModel
 import com.ekquickfind.app.shortcuts.ShortcutsPublisher
+import com.ekquickfind.app.ui.search.ClipboardSlot
 import com.ekquickfind.app.ui.search.SearchSurface
 import com.ekquickfind.app.ui.search.ZeroQueryContent
 import com.ekquickfind.app.ui.search.clipboardHasText
@@ -215,9 +216,13 @@ class SearchActivity : ComponentActivity() {
         val zeroQueryAll by viewModel.zeroQueryState.collectAsStateWithLifecycle()
         val prefs by viewModel.preferences.collectAsStateWithLifecycle()
         val zeroQuery = remember(zeroQueryAll, prefs.recentsCount) { zeroQueryAll.limitRecents(prefs.recentsCount) }
-        // Checked once per open; only the clip's description is looked at, so Android shows no "pasted" message.
+        // Android only answers clipboard questions once the window has focus, so check again when it gets it.
+        // Only the clip's description is looked at here, so Android shows no "pasted" message.
         val context = androidx.compose.ui.platform.LocalContext.current
-        val showClipboard = remember(prefs.clipboardChip) { prefs.clipboardChip && clipboardHasText(context) }
+        val focused = androidx.compose.ui.platform.LocalWindowInfo.current.isWindowFocused
+        val clipNow = remember(focused) { focused && clipboardHasText(context) }
+        val clips by viewModel.clips.collectAsStateWithLifecycle()
+        val showClipboard = prefs.clipboardChip && (clipNow || clips.isNotEmpty())
         val pinned by viewModel.pinnedIds.collectAsStateWithLifecycle()
         val style = LocalSurfaceStyle.current
         val view = LocalView.current
@@ -256,7 +261,12 @@ class SearchActivity : ComponentActivity() {
                         {
                             ZeroQueryContent(
                                 state = zeroQuery,
-                                showClipboard = showClipboard,
+                                clipboard =
+                                    if (showClipboard) {
+                                        ClipboardSlot(clips, viewModel::rememberClip, viewModel::forgetClip)
+                                    } else {
+                                        null
+                                    },
                                 menuActions = { result -> pinToggle(result, pinned) },
                                 onAction = { result, action -> run(result, action) },
                                 onQuery = viewModel::onQueryChange,

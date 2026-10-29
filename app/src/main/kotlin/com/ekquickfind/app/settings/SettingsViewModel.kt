@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ekquickfind.app.photos.PhotoTagWorker
 import com.ekquickfind.app.ui.settings.PhotoTagProgress
+import com.ekquickfind.data.clips.ClipRepository
 import com.ekquickfind.data.history.HistoryRepository
 import com.ekquickfind.data.photos.PhotoTagStore
 import com.ekquickfind.data.prefs.PreferencesRepository
@@ -33,6 +34,7 @@ class SettingsViewModel
     constructor(
         private val prefs: PreferencesRepository,
         private val history: HistoryRepository,
+        private val clipHistory: ClipRepository,
         index: AppIndex,
         private val photoTags: PhotoTagStore,
         private val photos: PhotoLibrary,
@@ -102,7 +104,11 @@ class SettingsViewModel
 
         fun unhide(id: String) = viewModelScope.launch { prefs.unhide(id) }
 
-        fun clearHistory() = viewModelScope.launch { history.clear() }
+        fun clearHistory() =
+            viewModelScope.launch {
+                history.clear()
+                clipHistory.clear()
+            }
 
         /** Photo tags are off by default, so a reset also stops tagging and clears the index, like turning them off. */
         fun resetSettings() =

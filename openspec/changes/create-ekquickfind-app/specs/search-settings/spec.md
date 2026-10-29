@@ -262,8 +262,12 @@ A "Before you type" panel on Search sources SHALL offer three switches, all on b
 
 - **Smart suggestions**: the Suggested row first lists what the user usually opens at this time of day (and kind of day), or with the headphones or car that are connected now, learned on the phone from their own launch history of the last 30 days; usage-based apps fill the rest. Each launch keeps the name of the connected audio device (read without any permission); one-off launches don't count.
 - **Next up**: the calendar event running now or starting in the next 12 hours (all-day events left out) shows first, when calendar search is on and allowed.
-- **Clipboard**: a Clipboard chip appears when text (not marked sensitive) was copied. Only tapping it reads the clipboard, so Android's "pasted from your clipboard" message never appears on open; it then shows the text with Search, Open link (for a web address), Call (for a phone number) and Share. Nothing is kept.
+- **Clipboard**: a Clipboard chip appears when text (not marked sensitive) was copied, checked again as soon as the search window has focus (Android refuses clipboard access before that), or when clips are remembered. Only tapping it reads the clipboard, so Android's "pasted from your clipboard" message never appears on open. The clip read is remembered (the last 10, for 7 days, in the app's no-backup folder so never in a cloud backup; sensitive clips never), and the remembered clips show as pages to swipe through, newest first, with dots below marking the current one. Each page has Search, Open link (for a web address), Call (for a phone number), Share and Forget. Clearing history also clears remembered clips.
 
 #### Scenario: The car playlist
 - **WHEN** the user has opened a music app a few times with "My Car" connected, and opens search with the car connected again
 - **THEN** that music app is the first suggestion, at any time of day
+
+#### Scenario: Swiping through clips
+- **WHEN** the user has opened three different clips with the chip this week and taps it again
+- **THEN** the newest clip shows first, swiping shows the other two, and three dots below mark which one is shown

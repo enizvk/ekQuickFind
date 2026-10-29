@@ -13,3 +13,4 @@ keystore.properties
 dist/
 # Local assistant notes and tooling
 .claude/
+.superpowers/

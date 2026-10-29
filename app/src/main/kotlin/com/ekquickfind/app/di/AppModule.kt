@@ -22,6 +22,7 @@ import com.ekquickfind.core.search.SearchProvider
 import com.ekquickfind.core.search.SignalsSource
 import com.ekquickfind.core.search.quick.QuickAnswersProvider
 import com.ekquickfind.data.EkDatabase
+import com.ekquickfind.data.clips.ClipRepository
 import com.ekquickfind.data.history.HistoryRepository
 import com.ekquickfind.data.photos.PhotoTagStore
 import com.ekquickfind.data.photos.RoomPhotoTagStore
@@ -68,6 +69,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import okhttp3.OkHttpClient
+import java.io.File
 import java.util.concurrent.TimeUnit
 import javax.inject.Qualifier
 import javax.inject.Singleton
@@ -256,6 +258,13 @@ const val GRID_COLUMNS = 5
 @Module
 @InstallIn(SingletonComponent::class)
 object EngineModule {
+    /** Remembered clips live in the no-backup folder, so they never reach a cloud backup. */
+    @Provides
+    @Singleton
+    fun clips(
+        @ApplicationContext context: Context,
+    ): ClipRepository = ClipRepository(File(context.noBackupFilesDir, "clips.json"))
+
     @Provides
     @Singleton
     fun history(

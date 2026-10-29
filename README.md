@@ -93,7 +93,7 @@ Spotlight made "just type it" the fastest way around a Mac. ekQuickFind brings t
 
 - 📅 **Calendar search** finds events by title or place, and a **Next up** card shows the event happening now or in the next 12 hours.
 - 🧠 **Smart suggestions** before you type: what you usually open at this hour, or with the headphones or car that are connected.
-- 📋 **Clipboard chip**: copied a link or a number? Tap the chip to search it, open the link, call the number or share it. The clipboard is only read when you tap.
+- 📋 **Clipboard chip**: copied a link or a number? Tap the chip to search it, open the link, call the number or share it, and swipe back through the last 10 clips you opened this week. The clipboard is only read when you tap.
 - 🔤 **Text size and fonts**: a size slider plus Lora, JetBrains Mono, Roboto Condensed and Nunito, built into the app so they work with any system font style.
 - 🌟 **Active item styles and animations**: a tinted card, soft glow or gradient highlight, and a light sweep, colour pulse, shimmer ring, breathe or twin lights on the search bar. Each one has a live preview in settings.
 - 🎯 **Exact match** with one tap in the search bar, for whole words only.
@@ -160,7 +160,7 @@ Everything above is configurable, grouped into pages like the system Settings ap
 - 🌐 Only web suggestions and the daily update check (direct-download version) use the network. Both can be turned off, and web search can be switched off entirely.
 - 📸 Photo tags are worked out on the phone; no photo ever leaves it.
 - 🧠 Smart suggestions are learned from your own history, on the phone.
-- 📋 The clipboard is only read when you tap the Clipboard chip, and nothing from it is kept. Text Android marks as sensitive, like passwords, is never offered.
+- 📋 The clipboard is only read when you tap the Clipboard chip. The clips you open are kept on the phone for 7 days, never in backups, and Clear history removes them. Text Android marks as sensitive, like passwords, is never read or kept.
 - ☁️ History is left out of cloud backups unless you turn that on.
 
 ## 📦 Get it

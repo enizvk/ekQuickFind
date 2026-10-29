@@ -13,6 +13,7 @@ import com.ekquickfind.core.search.ResultResolver
 import com.ekquickfind.core.search.SearchEngine
 import com.ekquickfind.core.search.SearchResult
 import com.ekquickfind.core.search.SearchState
+import com.ekquickfind.data.clips.ClipRepository
 import com.ekquickfind.data.history.HistoryRepository
 import com.ekquickfind.data.prefs.PreferencesRepository
 import com.ekquickfind.data.prefs.UserPreferences
@@ -42,6 +43,7 @@ class SearchViewModel
         zeroQuery: ZeroQuerySource,
         private val prefs: PreferencesRepository,
         private val history: HistoryRepository,
+        private val clipHistory: ClipRepository,
         private val resolvers: Map<ProviderId, @JvmSuppressWildcards ResultResolver>,
     ) : ViewModel() {
         private val _query = MutableStateFlow("")
@@ -138,7 +140,19 @@ class SearchViewModel
 
         fun forgetRecent(id: ResultId) = viewModelScope.launch { history.forgetResult(id) }
 
-        fun clearHistory() = viewModelScope.launch { history.clear() }
+        fun clearHistory() =
+            viewModelScope.launch {
+                history.clear()
+                clipHistory.clear()
+            }
+
+        /** Clips opened with the Clipboard chip, newest first (last 10, for 7 days). */
+        val clips: StateFlow<List<String>> =
+            clipHistory.clips.map { list -> list.map { it.text } }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+        fun rememberClip(text: String) = viewModelScope.launch { clipHistory.remember(text) }
+
+        fun forgetClip(text: String) = viewModelScope.launch { clipHistory.forget(text) }
 
         private fun titleOf(id: ResultId): String? {
             val current = state.value

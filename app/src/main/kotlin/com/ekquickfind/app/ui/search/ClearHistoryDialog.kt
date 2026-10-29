@@ -15,7 +15,7 @@ fun ClearHistoryDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Clear search history?") },
-        text = { Text("Recent items and learned ranking are removed from this device. Pinned items stay.") },
+        text = { Text("Recent items, learned ranking and remembered clips are removed from this device. Pinned items stay.") },
         confirmButton = { TextButton(onClick = onConfirm, modifier = Modifier.testTag("confirm-clear")) { Text("Clear") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )

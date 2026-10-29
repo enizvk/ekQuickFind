@@ -1,0 +1,62 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "12e0321e1446a9c98810a4695ace6c13",
+    "entities": [
+      {
+        "tableName": "app_label",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`packageName` TEXT NOT NULL, `activityName` TEXT NOT NULL, `userSerial` INTEGER NOT NULL, `label` TEXT NOT NULL, `profileBadge` TEXT, `isSystemApp` INTEGER NOT NULL, PRIMARY KEY(`packageName`, `activityName`, `userSerial`))",
+        "fields": [
+          {
+            "fieldPath": "packageName",
+            "columnName": "packageName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "activityName",
+            "columnName": "activityName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "userSerial",
+            "columnName": "userSerial",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "label",
+            "columnName": "label",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "profileBadge",
+            "columnName": "profileBadge",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "isSystemApp",
+            "columnName": "isSystemApp",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "packageName",
+            "activityName",
+            "userSerial"
+          ]
+        }
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '12e0321e1446a9c98810a4695ace6c13')"
+    ]
+  }
+}

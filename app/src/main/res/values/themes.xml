@@ -1,0 +1,12 @@
+<resources>
+    <style name="Theme.EkQuickFind" parent="android:Theme.Material.NoActionBar" />
+
+    <!-- Translucent overlay with the app underneath blurred, like a system search sheet. -->
+    <style name="Theme.EkQuickFind.Search" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:windowAnimationStyle">@android:style/Animation.Translucent</item>
+    </style>
+</resources>

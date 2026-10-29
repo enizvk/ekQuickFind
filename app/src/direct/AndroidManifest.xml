@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Direct-download build only: self-update. The store build never asks for these. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Install newer versions of ekQuickFind, and tell the owner when one is waiting. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
+    <application>
+        <receiver
+            android:name=".update.UpdateStatusReceiver"
+            android:exported="false" />
+    </application>
+</manifest>

@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">ekQuickFind</string>
+    <string name="widget_description">A search bar for apps, contacts, settings, files and the web</string>
+    <string name="shortcut_new_search">Search</string>
+    <string name="shortcut_new_search_long">New search</string>
+    <string name="shortcut_settings">Settings</string>
+    <string name="shortcut_settings_long">ekQuickFind settings</string>
+</resources>

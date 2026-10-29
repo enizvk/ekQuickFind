@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<voice-interaction-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:sessionService="com.ekquickfind.app.assist.EkVoiceInteractionSessionService"
+    android:recognitionService="com.ekquickfind.app.assist.EkRecognitionService"
+    android:supportsAssist="true"
+    android:supportsLaunchVoiceAssistFromKeyguard="false" />

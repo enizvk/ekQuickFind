@@ -1,0 +1,15 @@
+.gradle/
+build/
+local.properties
+.idea/
+*.iml
+.kotlin/
+captures/
+.DS_Store
+# Release signing (keep the keystore and its passwords out of version control)
+keystore.properties
+*.jks
+# Release files to attach to GitHub releases
+dist/
+# Local assistant notes and tooling
+.claude/

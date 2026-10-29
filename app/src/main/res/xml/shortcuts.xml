@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="new_search"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_search"
+        android:shortcutShortLabel="@string/shortcut_new_search"
+        android:shortcutLongLabel="@string/shortcut_new_search_long">
+        <intent
+            android:action="android.intent.action.MAIN"
+            android:targetPackage="com.ekquickfind.app"
+            android:targetClass="com.ekquickfind.app.search.SearchActivity" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="settings"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_settings"
+        android:shortcutShortLabel="@string/shortcut_settings"
+        android:shortcutLongLabel="@string/shortcut_settings_long">
+        <intent
+            android:action="com.ekquickfind.app.OPEN_SETTINGS"
+            android:targetPackage="com.ekquickfind.app"
+            android:targetClass="com.ekquickfind.app.search.SearchActivity" />
+    </shortcut>
+</shortcuts>

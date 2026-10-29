@@ -109,6 +109,7 @@ Spotlight made "just type it" the fastest way around a Mac. ekQuickFind brings t
 - 🌟 **Active item styles and animations**: a tinted card, soft glow or gradient highlight, and a light sweep, colour pulse, shimmer ring, breathe or twin lights on the search bar. Each one has a live preview in settings.
 - 🎯 **Exact match** with one tap in the search bar, for whole words only.
 - ♻️ **Reset all settings** in one tap, keeping your history, pins and hidden results.
+- 👋 **A friendly first start**: allow everything ekQuickFind can search in one go, no digging through system settings, and the floating button is ready right away.
 
 ## 🧩 Features
 

@@ -44,9 +44,10 @@ class PersonalisationPreferencesTest {
         assertTrue(p.smartSuggestions)
         assertTrue(p.nextUp)
         assertTrue(p.clipboardChip)
+        assertFalse(p.onboardingDone)
         assertTrue(p.barAnimationOn)
         assertTrue(p.itemAnimationOn)
-        assertEquals(ItemAnimation.Settle, p.itemAnimation)
+        assertEquals(ItemAnimation.TwinLights, p.itemAnimation)
         assertEquals(ActiveItemStyle.TintedCard, p.activeItemStyle)
         assertEquals(1f, p.textScale, 0f)
         assertEquals(ResultFont.Default, p.resultFont)
@@ -71,9 +72,13 @@ class PersonalisationPreferencesTest {
                 resultFont = ResultFont.Serif,
                 hiddenResults = mapOf("apps:com.example" to "Example"),
                 tileAdded = true,
+                onboardingDone = true,
             )
         val reset = customised.resetToDefaults()
-        assertEquals(UserPreferences(hiddenResults = mapOf("apps:com.example" to "Example"), tileAdded = true), reset)
+        assertEquals(
+            UserPreferences(hiddenResults = mapOf("apps:com.example" to "Example"), tileAdded = true, onboardingDone = true),
+            reset,
+        )
     }
 
     @Test

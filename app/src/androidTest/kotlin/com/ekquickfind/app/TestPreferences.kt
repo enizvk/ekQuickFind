@@ -16,4 +16,5 @@ fun testBaseline(current: UserPreferences): UserPreferences =
         sectionLayouts = mapOf(SectionKey.Settings to SectionLayout.Rows),
         searchEngine = SearchEngineChoice.DuckDuckGo,
         floatingButton = false,
+        onboardingDone = true,
     )

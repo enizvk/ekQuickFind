@@ -167,13 +167,15 @@ data class UserPreferences(
     val nextUp: Boolean = true,
     /** Before typing: a Clipboard chip; the clipboard is only read when it's tapped. */
     val clipboardChip: Boolean = true,
+    /** The first-start welcome (permissions in one go) was finished or skipped. */
+    val onboardingDone: Boolean = false,
     /** The exact-match button in the search bar; hiding it also turns exact match off. */
     val exactMatchButton: Boolean = true,
     // Reduce motion turns both animations off.
     val barAnimationOn: Boolean = true,
     val barAnimation: BarAnimation = BarAnimation.TwinLights,
     val itemAnimationOn: Boolean = true,
-    val itemAnimation: ItemAnimation = ItemAnimation.Settle,
+    val itemAnimation: ItemAnimation = ItemAnimation.TwinLights,
     val activeItemStyle: ActiveItemStyle = ActiveItemStyle.TintedCard,
     /** Text size on the search screen, on top of Android's font size; 0.8..1.6 from the slider. */
     val textScale: Float = 1f,
@@ -196,8 +198,8 @@ data class UserPreferences(
 ) {
     fun layoutFor(section: SectionKey): SectionLayout = sectionLayouts[section] ?: SectionKey.defaultLayouts[section] ?: SectionLayout.Rows
 
-    /** Every setting back to its default; hidden results (and excluded apps) are the user's data, and the tile state is a fact. */
-    fun resetToDefaults() = UserPreferences(hiddenResults = hiddenResults, tileAdded = tileAdded)
+    /** Every setting back to its default; hidden results (and excluded apps) are the user's data, the rest are facts. */
+    fun resetToDefaults() = UserPreferences(hiddenResults = hiddenResults, tileAdded = tileAdded, onboardingDone = onboardingDone)
 
     fun sanitized() =
         copy(

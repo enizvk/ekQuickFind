@@ -488,6 +488,15 @@ class SettingsFlowTest {
         compose.waitUntilAtLeastOneExists(hasText("second clip"), 3_000)
     }
 
+    @Test
+    fun theWelcomeShowsOnFirstStartAndNotNowGoesStraightToSearch() {
+        set { it.copy(onboardingDone = false) }
+        compose.waitUntil(3_000) { exists("onboarding") && exists("onboarding-skip") }
+        compose.onNodeWithTag("onboarding-skip", useUnmergedTree = true).performClick()
+        compose.waitUntil(3_000) { exists("query") && !exists("onboarding") }
+        assertTrue(runBlocking { prefs.preferences.first().onboardingDone })
+    }
+
     // Exact match toggle
 
     @Test

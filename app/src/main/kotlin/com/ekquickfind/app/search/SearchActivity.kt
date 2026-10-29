@@ -33,6 +33,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import coil3.SingletonImageLoader
 import com.ekquickfind.app.icons.EkImageLoader
+import com.ekquickfind.app.onboarding.OnboardingScreen
 import com.ekquickfind.app.settings.SettingsViewModel
 import com.ekquickfind.app.shortcuts.ShortcutsPublisher
 import com.ekquickfind.app.ui.search.ClipboardSlot
@@ -114,6 +115,12 @@ class SearchActivity : ComponentActivity() {
                                 .Color(it)
                         },
             ) {
+                val onboarding by viewModel.onboardingNeeded.collectAsStateWithLifecycle()
+                if (onboarding == true) {
+                    LaunchedEffect(Unit) { background.apply(style, blurEnabled = false) }
+                    OnboardingScreen(floatingButton = prefs.floatingButton, onFinish = viewModel::finishOnboarding)
+                    return@EkQuickFindTheme
+                }
                 CompositionLocalProvider(LocalSurfaceStyle provides style) {
                     SharedTransitionLayout {
                         NavHost(

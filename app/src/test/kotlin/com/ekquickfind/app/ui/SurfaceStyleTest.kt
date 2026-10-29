@@ -60,7 +60,7 @@ class SurfaceStyleTest {
     fun theBarAndItemAnimationsTurnOffSeparately() {
         val barOff = UserPreferences(barAnimationOn = false).toSurfaceStyle()
         assertNull(barOff.barAnimation)
-        assertEquals(ItemAnimation.Settle, barOff.itemAnimation)
+        assertEquals(ItemAnimation.TwinLights, barOff.itemAnimation)
         val itemOff = UserPreferences(itemAnimationOn = false).toSurfaceStyle()
         assertNull(itemOff.itemAnimation)
         assertEquals(BarAnimation.TwinLights, itemOff.barAnimation)

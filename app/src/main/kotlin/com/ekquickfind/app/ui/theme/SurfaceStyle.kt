@@ -55,7 +55,7 @@ data class SurfaceStyle(
     /** Plays once when search opens; null when it's off. */
     val barAnimation: BarAnimation? = BarAnimation.TwinLights,
     /** Plays when a result becomes active; null when it's off, and then the highlight just moves. */
-    val itemAnimation: ItemAnimation? = ItemAnimation.Settle,
+    val itemAnimation: ItemAnimation? = ItemAnimation.TwinLights,
     val activeItem: ActiveItemStyle = ActiveItemStyle.TintedCard,
     /** Font and weight for result text; null keeps the theme's. */
     val resultFont: FontFamily? = null,

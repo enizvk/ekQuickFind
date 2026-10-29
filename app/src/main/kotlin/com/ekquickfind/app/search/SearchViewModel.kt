@@ -104,6 +104,12 @@ class SearchViewModel
             }
         }
 
+        /** Null until preferences are read, so the welcome never flashes for people who finished it. */
+        val onboardingNeeded: StateFlow<Boolean?> =
+            prefs.preferences.map { !it.onboardingDone }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+        fun finishOnboarding() = viewModelScope.launch { prefs.update { it.copy(onboardingDone = true) } }
+
         fun setExactMatch(on: Boolean) = viewModelScope.launch { prefs.update { it.copy(exactMatch = on) } }
 
         fun reset() {

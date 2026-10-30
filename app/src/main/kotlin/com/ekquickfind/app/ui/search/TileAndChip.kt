@@ -1,6 +1,7 @@
 package com.ekquickfind.app.ui.search
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,6 +17,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -36,6 +38,7 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.ekquickfind.app.ui.theme.LocalSurfaceStyle
 import com.ekquickfind.core.search.Action
@@ -76,6 +79,7 @@ internal fun ResultTile(
     modifier: Modifier = Modifier,
     highlightQuery: String = "",
     selected: Boolean = false,
+    iconSize: Dp = LocalSurfaceStyle.current.tileIconSize,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
     val accent = MaterialTheme.colorScheme.primary
@@ -103,7 +107,7 @@ internal fun ResultTile(
                     .testTag("tile:${result.id.value}"),
         ) {
             Box {
-                ResultIconView(result.icon, LocalSurfaceStyle.current.tileIconSize, result.handler)
+                ResultIconView(result.icon, iconSize, result.handler)
                 result.badge?.let {
                     Surface(
                         shape = CircleShape,
@@ -137,6 +141,10 @@ internal fun RecentsStrip(
     recent: List<SearchResult>,
     menuActions: MenuActions,
     onAction: (SearchResult, Action) -> Unit,
+    /** Something before the recents, like the Clipboard chip. */
+    lead: (@Composable () -> Unit)? = null,
+    /** Empties the recents; null hides the small X. */
+    onClear: (() -> Unit)? = null,
 ) {
     // A history mark and tonal chips set it apart from the result sections.
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.testTag("recents-strip")) {
@@ -146,7 +154,30 @@ internal fun RecentsStrip(
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(start = 8.dp, end = 4.dp).size(18.dp),
         )
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp), contentPadding = PaddingValues(end = 4.dp)) {
+        if (onClear != null && recent.isNotEmpty()) {
+            Box(
+                Modifier
+                    .padding(end = 4.dp)
+                    .size(24.dp)
+                    .clip(CircleShape)
+                    .clickable(onClickLabel = "Clear recents", onClick = onClear)
+                    .testTag("clear-recents"),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    Icons.Outlined.Close,
+                    contentDescription = "Clear recents",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(14.dp),
+                )
+            }
+        }
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            contentPadding = PaddingValues(end = 10.dp),
+        ) {
+            lead?.let { item(key = "lead") { it() } }
             items(recent, key = { it.id.value }) { r ->
                 ResultChip(r, menuActions.forResult(r), { onAction(r, it) }, small = true, tagPrefix = "strip:")
             }

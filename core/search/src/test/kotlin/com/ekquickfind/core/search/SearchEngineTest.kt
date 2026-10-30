@@ -192,6 +192,8 @@ class SearchEngineTest {
                 Section.Web,
                 Section.Files,
                 Section.QuickAnswers,
+                Section.Translation,
+                Section.Sites,
                 Section.Apps,
                 Section.Contacts,
                 Section.Calendar,

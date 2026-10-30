@@ -9,6 +9,7 @@ import com.ekquickfind.core.search.ResultIcon
 import com.ekquickfind.core.search.ResultId
 import com.ekquickfind.core.search.SearchResult
 import com.ekquickfind.core.search.Section
+import com.ekquickfind.data.history.RecentResult
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -46,34 +47,43 @@ class ZeroQueryStateTest {
     }
 
     @Test
-    fun recentsInTheStripLeaveNothingForThePanel() {
-        assertFalse(ZeroQueryState(recent = listOf(camera)).showsPanel(recentsInStrip = true))
+    fun recentsInTheStripLeaveOnlyTheHintInThePanel() {
+        assertTrue(ZeroQueryState(recent = listOf(camera)).onlyHint(recentsInStrip = true))
     }
 
     @Test
     fun recentsShowInThePanelWhenTheStripIsOff() {
-        assertTrue(ZeroQueryState(recent = listOf(camera)).showsPanel(recentsInStrip = false))
+        assertFalse(ZeroQueryState(recent = listOf(camera)).onlyHint(recentsInStrip = false))
     }
 
     @Test
-    fun pinnedItemsKeepThePanelWithTheStripOn() {
-        assertTrue(ZeroQueryState(pinned = listOf(camera), recent = listOf(camera)).showsPanel(recentsInStrip = true))
+    fun pinnedItemsFillThePanelWithTheStripOn() {
+        assertFalse(ZeroQueryState(pinned = listOf(camera), recent = listOf(camera)).onlyHint(recentsInStrip = true))
     }
 
     @Test
-    fun suggestedAppsKeepThePanelWithTheStripOn() {
-        assertTrue(ZeroQueryState(suggested = listOf(camera)).showsPanel(recentsInStrip = true))
+    fun suggestedAppsFillThePanelWithTheStripOn() {
+        assertFalse(ZeroQueryState(suggested = listOf(camera)).onlyHint(recentsInStrip = true))
     }
 
     @Test
-    fun aNextUpEventKeepsThePanelWithTheStripOnAndIsNotEmpty() {
+    fun aNextUpEventFillsThePanelAndIsNotEmpty() {
         val state = ZeroQueryState(nextUp = camera)
         assertFalse(state.isEmpty)
-        assertTrue(state.showsPanel(recentsInStrip = true))
+        assertFalse(state.onlyHint(recentsInStrip = true))
     }
 
     @Test
-    fun anEmptyHistoryShowsThePanelWithTheHint() {
-        assertTrue(ZeroQueryState().showsPanel(recentsInStrip = true))
+    fun anEmptyHistoryShowsTheHint() {
+        assertTrue(ZeroQueryState().onlyHint(recentsInStrip = true))
+        assertTrue(ZeroQueryState().onlyHint(recentsInStrip = false))
+    }
+
+    @Test
+    fun clearingRecentsHidesWhatWasOpenedBeforeButNotAfter() {
+        val before = RecentResult("apps:Camera", "apps", lastAt = 100)
+        val after = RecentResult("apps:Maps", "apps", lastAt = 300)
+        assertEquals(listOf(after), visibleRecents(listOf(before, after), clearedAt = 200))
+        assertEquals(listOf(before, after), visibleRecents(listOf(before, after), clearedAt = 0))
     }
 }

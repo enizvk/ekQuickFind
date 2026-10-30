@@ -10,7 +10,6 @@ import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -37,6 +36,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -61,7 +62,6 @@ import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material.icons.outlined.TextFields
 import androidx.compose.material.icons.outlined.TouchApp
-import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.Wallpaper
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -89,19 +89,19 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -109,18 +109,15 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.core.net.toUri
@@ -130,13 +127,8 @@ import com.ekquickfind.app.BuildConfig
 import com.ekquickfind.app.floating.FloatingButtonService
 import com.ekquickfind.app.floating.FloatingButtonState
 import com.ekquickfind.app.ui.search.ClearHistoryDialog
-import com.ekquickfind.app.ui.search.ResultsFont
-import com.ekquickfind.app.ui.search.activeHighlight
-import com.ekquickfind.app.ui.search.openingGlow
-import com.ekquickfind.app.ui.theme.LocalSurfaceStyle
 import com.ekquickfind.app.ui.theme.ekColorScheme
 import com.ekquickfind.app.ui.theme.family
-import com.ekquickfind.app.ui.theme.toSurfaceStyle
 import com.ekquickfind.data.prefs.AccentColor
 import com.ekquickfind.data.prefs.ActiveItemStyle
 import com.ekquickfind.data.prefs.AiChat
@@ -196,10 +188,15 @@ private val providerRows =
         ProviderRow("quick-answers", "Quick answers", "Calculator and unit conversion"),
     )
 
+/** One card or row each, so there's no layout to pick. */
+private val fixedLayoutSections = setOf(SectionKey.QuickAnswers, SectionKey.Translation, SectionKey.Web, SectionKey.Sites)
+
 private val sectionNames =
     mapOf(
         SectionKey.QuickAnswers to "Answer",
+        SectionKey.Translation to "Translation",
         SectionKey.Apps to "Apps",
+        SectionKey.Sites to "Search with",
         SectionKey.Contacts to "Contacts",
         SectionKey.Calendar to "Calendar",
         SectionKey.Settings to "Settings",
@@ -221,7 +218,10 @@ fun SettingsScreen(
     photoTagProgress: PhotoTagProgress? = null,
     /** Null shows the menu of pages. */
     page: SettingsPage? = null,
+    /** A panel title to scroll to and flash, from settings search. */
+    focus: String? = null,
     onOpenPage: (SettingsPage) -> Unit = {},
+    onOpenPanel: (SettingsPage, String) -> Unit = { target, _ -> onOpenPage(target) },
 ) {
     var confirmClear by remember { mutableStateOf(false) }
     if (confirmClear) {
@@ -256,41 +256,87 @@ fun SettingsScreen(
                     windowInsets = WindowInsets(0),
                 )
             }
-            CompositionLocalProvider(LocalSettingsPageTitle provides page?.title) {
-                LazyColumn(contentPadding = PaddingValues(bottom = 32.dp), modifier = Modifier.testTag("settings-list")) {
-                    when (page) {
-                        null -> item { SettingsMenu(onOpenPage) }
-                        SettingsPage.Sources -> {
-                            item { SourcesSection(prefs, actions, photoTagProgress) }
-                            item { BeforeTypingSection(prefs, actions) }
-                            item { OrderSection(prefs, actions) }
-                            item { ResultsLayoutSection(prefs, actions) }
-                        }
-                        SettingsPage.WebAi -> item { WebSection(prefs, actions) }
-                        SettingsPage.Look -> {
-                            item { BackgroundSection(prefs, actions) }
-                            item { AppearanceSection(prefs, actions) }
-                            item { TextSection(prefs, actions) }
-                            item { SearchBarSection(prefs, actions) }
-                            item { ActiveItemSection(prefs, actions) }
-                        }
-                        SettingsPage.Keyboard -> item { KeyboardSection(prefs, actions) }
-                        SettingsPage.WaysToOpen -> {
-                            item { entryPoints() }
-                            item { FloatingButtonSection(prefs, actions) }
-                        }
-                        SettingsPage.Privacy -> item { PrivacySection(prefs, actions) { confirmClear = true } }
-                        SettingsPage.About -> {
-                            item { AboutSection() }
-                            if (BuildConfig.UPDATE_FEED_URL.isNotBlank()) item { updates() }
-                            item { ResetSection { confirmReset = true } }
+            // Each page is a list of named panels, so settings search can scroll to one by its title.
+            val panels: List<Pair<String, @Composable () -> Unit>> =
+                when (page) {
+                    null -> listOf(panel("menu") { SettingsMenu(onOpenPage, onOpenPanel) })
+                    SettingsPage.Sources ->
+                        listOf(
+                            panel("Search sources") { SourcesSection(prefs, actions, photoTagProgress) },
+                            panel("Before you type") { BeforeTypingSection(prefs, actions) },
+                            panel("Result order") { OrderSection(prefs, actions) },
+                            panel("Layout") { ResultsLayoutSection(prefs, actions) },
+                        )
+                    SettingsPage.WebAi ->
+                        listOf(
+                            panel("Web and AI") { WebSection(prefs, actions) },
+                            panel("Search sites") { SearchSitesSection(prefs, actions) },
+                            panel("Translation") { TranslationSection(prefs, actions) },
+                        )
+                    SettingsPage.Look ->
+                        listOf(
+                            panel("Quick looks") { QuickLooks(prefs, actions) },
+                            panel("Background") { BackgroundSection(prefs, actions) },
+                            panel("Appearance") { AppearanceSection(prefs, actions) },
+                            panel("Text") { TextSection(prefs, actions) },
+                            panel("Search bar") { SearchBarSection(prefs, actions) },
+                            panel("Active item") { ActiveItemSection(prefs, actions) },
+                        )
+                    SettingsPage.Keyboard -> listOf(panel("Keyboard and feedback") { KeyboardSection(prefs, actions) })
+                    SettingsPage.WaysToOpen ->
+                        listOf(
+                            panel("Ways to open") { entryPoints() },
+                            panel("Floating button") { FloatingButtonSection(prefs, actions) },
+                        )
+                    SettingsPage.Privacy -> listOf(panel("Privacy") { PrivacySection(prefs, actions) { confirmClear = true } })
+                    SettingsPage.About ->
+                        listOfNotNull(
+                            panel("About") { AboutSection() },
+                            (panel("Updates") { updates() }).takeIf { BuildConfig.UPDATE_FEED_URL.isNotBlank() },
+                            panel("Reset") { ResetSection { confirmReset = true } },
+                        )
+                }
+            val listState = rememberLazyListState()
+            val focused = remember { mutableStateOf(focus) }
+            // The Look page's pinned preview sits above its panels.
+            val pinnedPreview = page == SettingsPage.Look
+            LaunchedEffect(focus) {
+                val index = panels.indexOfFirst { it.first == focus }
+                if (index >= 0) listState.animateScrollToItem(index + if (pinnedPreview) 1 else 0)
+            }
+            CompositionLocalProvider(
+                LocalSettingsPageTitle provides page?.title,
+                LocalSettingsPrefs provides prefs,
+                LocalSettingsActions provides actions,
+                LocalFocusedPanel provides focused,
+            ) {
+                LazyColumn(
+                    state = listState,
+                    contentPadding = PaddingValues(bottom = 32.dp),
+                    modifier = Modifier.testTag("settings-list"),
+                ) {
+                    if (pinnedPreview) {
+                        stickyHeader(key = "preview") {
+                            // Shrinks to a strip once the first panel scrolls away.
+                            val compact by remember { derivedStateOf { listState.firstVisibleItemIndex > 1 } }
+                            LookPreview(prefs, compact)
                         }
                     }
+                    items(panels, key = { it.first }) { it.second() }
                 }
             }
         }
     }
 }
+
+private const val TOP_RESULT_INFO =
+    "Featured shows the best match as a big card above everything. In its section keeps it in its usual place, highlighted."
+
+/** A page's panel by its title, so settings search can find it in the list. */
+private fun panel(
+    title: String,
+    content: @Composable () -> Unit,
+): Pair<String, @Composable () -> Unit> = title to content
 
 /** Title of the open settings page, so a panel with the same name skips its heading. */
 private val LocalSettingsPageTitle = staticCompositionLocalOf<String?> { null }
@@ -301,7 +347,7 @@ enum class SettingsPage(
     val summary: String,
 ) {
     Sources("Search sources", "What to search, result order and layout"),
-    WebAi("Web and AI", "Web search, suggestions, search engine and Ask AI"),
+    WebAi("Web and AI", "Web search, search engine, site shortcuts, weather and Ask AI"),
     Look("Look and feel", "Background, theme, text, search bar and active item"),
     Keyboard("Keyboard and feedback", "Enter key, haptics and motion"),
     WaysToOpen("Ways to open", "Home screen bar, Quick Settings tile and assistant"),
@@ -326,7 +372,16 @@ private fun SettingsPage.icon(): ImageVector =
     }
 
 @Composable
-private fun SettingsMenu(onOpen: (SettingsPage) -> Unit) {
+private fun SettingsMenu(
+    onOpen: (SettingsPage) -> Unit,
+    onOpenPanel: (SettingsPage, String) -> Unit,
+) {
+    var query by rememberSaveable { mutableStateOf("") }
+    SettingsSearchField(query) { query = it }
+    if (query.isNotBlank()) {
+        SettingsSearchResults(SettingsIndex.search(query)) { entry -> onOpenPanel(entry.page, entry.panel.title) }
+        return
+    }
     Surface(
         shape = RoundedCornerShape(24.dp),
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -368,15 +423,16 @@ internal fun SectionTitle(
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier.padding(start = 24.dp, top = 22.dp, bottom = 8.dp),
+        modifier = Modifier.fillMaxWidth().padding(start = 24.dp, end = 12.dp, top = 14.dp).heightIn(min = 40.dp),
     ) {
         icon?.let { Icon(it, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp)) }
         Text(
             text,
             style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.testTag("settings-section:$text"),
+            modifier = Modifier.weight(1f).testTag("settings-section:$text"),
         )
+        PanelResetLine(text)
     }
 }
 
@@ -385,16 +441,30 @@ internal fun SectionTitle(
 internal fun SettingsGroup(
     title: String,
     icon: ImageVector? = null,
+    /** Rarer options, folded under "More options". */
+    more: (@Composable ColumnScope.() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    // On a page that is just this panel, the page title already says it.
-    if (title != LocalSettingsPageTitle.current) SectionTitle(title, icon) else Spacer(Modifier.height(8.dp))
+    // On a page that is just this panel, the page title already says it; the Reset line still shows.
+    if (title != LocalSettingsPageTitle.current) {
+        SectionTitle(title, icon)
+    } else {
+        Row(Modifier.fillMaxWidth().padding(end = 12.dp), horizontalArrangement = Arrangement.End) { PanelResetLine(title) }
+    }
     Surface(
         shape = RoundedCornerShape(20.dp),
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        modifier = Modifier.padding(horizontal = 12.dp).fillMaxWidth().testTag("settings-group:$title"),
+        modifier =
+            Modifier
+                .padding(horizontal = 12.dp)
+                .fillMaxWidth()
+                .flashWhenFocused(title)
+                .testTag("settings-group:$title"),
     ) {
-        Column(Modifier.padding(vertical = 6.dp), content = content)
+        Column(Modifier.padding(vertical = 6.dp)) {
+            content()
+            more?.let { MoreOptions(title, it) }
+        }
     }
 }
 
@@ -411,6 +481,8 @@ internal fun SwitchRow(
     checked: Boolean,
     onChange: (Boolean) -> Unit,
     tag: String,
+    /** A short explanation behind an ⓘ next to the title. */
+    info: String? = null,
     trailingExtra: @Composable (() -> Unit)? = null,
 ) {
     Row(
@@ -422,7 +494,10 @@ internal fun SwitchRow(
                 .padding(start = 16.dp, end = 12.dp, top = 8.dp, bottom = 8.dp),
     ) {
         Column(Modifier.weight(1f).padding(end = 12.dp)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(title, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f, fill = false))
+                info?.let { InfoTip(title, it) }
+            }
             subtitle?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             trailingExtra?.invoke()
         }
@@ -432,21 +507,20 @@ internal fun SwitchRow(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun <T> Choice(
+internal fun <T> Choice(
     label: String,
     options: List<T>,
     selected: T,
     name: (T) -> String,
     onSelect: (T) -> Unit,
     tag: String,
+    info: String? = null,
 ) {
     Column(Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
-        Text(
-            label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(bottom = 6.dp),
-        )
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 6.dp)) {
+            Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            info?.let { InfoTip(label, it) }
+        }
         SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
             options.forEachIndexed { i, option ->
                 SegmentedButton(
@@ -582,6 +656,9 @@ private fun BeforeTypingSection(
             prefs.smartSuggestions,
             { v -> actions.update { it.copy(smartSuggestions = v) } },
             "smart-suggestions",
+            info =
+                "Opened Spotify a few times with the car connected? It's suggested again whenever the car is connected. " +
+                    "Morning apps come up in the morning. All of it is worked out on the phone from your own history.",
         )
         SettingsDivider()
         SwitchRow(
@@ -893,17 +970,36 @@ private fun ResultsLayoutSection(
     prefs: UserPreferences,
     actions: SettingsActions,
 ) {
-    SettingsGroup("Layout", Icons.Outlined.GridView) {
+    SettingsGroup(
+        "Layout",
+        Icons.Outlined.GridView,
+        more = {
+            Choice(
+                "Results per section",
+                listOf(3, 4, 6, 8),
+                prefs.resultsPerSection,
+                { it.toString() },
+                { v -> actions.update { it.copy(resultsPerSection = v) } },
+                "per-section",
+                info = "How many results each section shows before its “More” button.",
+            )
+        },
+    ) {
         Choice("Icon size", IconSize.entries, prefs.iconSize, { it.name }, { v -> actions.update { it.copy(iconSize = v) } }, "icon-size")
-        Choice("Density", Density.entries, prefs.density, { it.name }, { v -> actions.update { it.copy(density = v) } }, "density")
-        Choice("Results per section", listOf(3, 4, 6, 8), prefs.resultsPerSection, {
-            it.toString()
-        }, { v -> actions.update { it.copy(resultsPerSection = v) } }, "per-section")
-        // Answers and web links have one fixed layout.
-        sectionNames.keys.filter { it != SectionKey.QuickAnswers && it != SectionKey.Web }.forEach { key ->
-            Choice(sectionNames.getValue(key), SectionLayout.entries, prefs.layoutFor(key), {
+        Choice(
+            "Density",
+            Density.entries,
+            prefs.density,
+            { it.name },
+            { v -> actions.update { it.copy(density = v) } },
+            "density",
+            info = "Compact puts more results on screen with less space between them.",
+        )
+        // Answers, site shortcuts and web links have one fixed layout.
+        sectionNames.keys.filter { it !in fixedLayoutSections }.forEach { key ->
+            PictureChoice(sectionNames.getValue(key), SectionLayout.entries, prefs.layoutFor(key), {
                 it.name
-            }, { actions.setLayout(key, it) }, "layout:${key.name}")
+            }, { actions.setLayout(key, it) }, "layout:${key.name}") { LayoutPicture(it) }
         }
     }
 }
@@ -913,32 +1009,38 @@ private fun SearchBarSection(
     prefs: UserPreferences,
     actions: SettingsActions,
 ) {
-    SettingsGroup("Search bar", Icons.Outlined.Search) {
-        Choice("Position", SurfacePosition.entries, prefs.position, {
+    SettingsGroup(
+        "Search bar",
+        Icons.Outlined.Search,
+        more = {
+            if (prefs.recentsStrip) {
+                PictureChoice("Recent strip position", StripPosition.entries, prefs.stripPosition, {
+                    if (it == StripPosition.Top) "Above results" else "Below results"
+                }, { v -> actions.update { it.copy(stripPosition = v) } }, "strip-position") { StripPicture(it) }
+            }
+            RecentsCountField(prefs.recentsCount) { v -> actions.update { it.copy(recentsCount = v) } }
+            SettingsDivider()
+            SwitchRow(
+                "Exact match button",
+                "A quote-mark button in the bar that searches for whole words only",
+                prefs.exactMatchButton,
+                // Hidden, it couldn't be turned off again, so exact match goes off with it.
+                { v -> actions.update { it.copy(exactMatchButton = v, exactMatch = it.exactMatch && v) } },
+                "exact-button-switch",
+                info = "With it on, “map” finds only names with the word “map”, not “Maps” or “Bitmap”. Tap it in the bar to switch.",
+            )
+        },
+    ) {
+        PictureChoice("Position", SurfacePosition.entries, prefs.position, {
             it.name
-        }, { v -> actions.update { it.copy(position = v) } }, "position")
+        }, { v -> actions.update { it.copy(position = v) } }, "position") { PositionPicture(it) }
         SettingsDivider()
         SwitchRow(
             "Recent items strip",
-            "Moves recently opened items from the list to a strip of small chips, visible while typing",
+            "Recently opened items as small chips next to the bar, even while typing",
             prefs.recentsStrip,
             { v -> actions.update { it.copy(recentsStrip = v) } },
             "recents-strip-toggle",
-        )
-        if (prefs.recentsStrip) {
-            Choice("Recent strip position", StripPosition.entries, prefs.stripPosition, {
-                it.name
-            }, { v -> actions.update { it.copy(stripPosition = v) } }, "strip-position")
-        }
-        RecentsCountField(prefs.recentsCount) { v -> actions.update { it.copy(recentsCount = v) } }
-        SettingsDivider()
-        SwitchRow(
-            "Exact match button",
-            "A quote-mark button in the bar that searches for whole words only",
-            prefs.exactMatchButton,
-            // Hidden, it couldn't be turned off again, so exact match goes off with it.
-            { v -> actions.update { it.copy(exactMatchButton = v, exactMatch = it.exactMatch && v) } },
-            "exact-button-switch",
         )
         SettingsDivider()
         SwitchRow(
@@ -952,7 +1054,6 @@ private fun SearchBarSection(
             AnimationChips(BarAnimation.entries, prefs.barAnimation, { it.label() }, { v ->
                 actions.update { it.copy(barAnimation = v) }
             }, "bar-animation")
-            BarPreview(prefs)
         }
     }
 }
@@ -973,7 +1074,15 @@ private fun TextSection(
     prefs: UserPreferences,
     actions: SettingsActions,
 ) {
-    SettingsGroup("Text", Icons.Outlined.TextFields) {
+    SettingsGroup(
+        "Text",
+        Icons.Outlined.TextFields,
+        more = {
+            Choice("Weight", ResultWeight.entries, prefs.resultWeight, { it.name }, { v ->
+                actions.update { it.copy(resultWeight = v) }
+            }, "result-weight", info = "Regular keeps the usual mix of light and bold text; the others make all result text that weight.")
+        },
+    ) {
         TextSizeSlider(prefs.textScale) { v -> actions.update { it.copy(textScale = v) } }
         SettingsDivider()
         Text(
@@ -1002,11 +1111,6 @@ private fun TextSection(
                 )
             }
         }
-        SettingsDivider()
-        Choice("Weight", ResultWeight.entries, prefs.resultWeight, { it.name }, { v ->
-            actions.update { it.copy(resultWeight = v) }
-        }, "result-weight")
-        TextPreview(prefs)
     }
 }
 
@@ -1039,90 +1143,6 @@ private fun TextSizeSlider(
     }
 }
 
-/** Sample results in the chosen size, font and weight, as the search screen shows them. */
-@Composable
-private fun TextPreview(prefs: UserPreferences) {
-    val style = prefs.toSurfaceStyle()
-    val density = LocalDensity.current
-    PreviewFrame("text-preview") {
-        CompositionLocalProvider(
-            LocalSurfaceStyle provides style,
-            // The prefs Density (list spacing) shares the name, hence the full name here.
-            LocalDensity provides
-                androidx.compose.ui.unit
-                    .Density(density.density, density.fontScale * style.textScale),
-        ) {
-            ResultsFont {
-                PreviewPanel {
-                    PreviewRow("Example result", active = false, subtitle = "App · opened today")
-                    PreviewRow("Another result", active = false, subtitle = "Settings")
-                }
-            }
-        }
-    }
-}
-
-/**
- * Sets a preview apart from the controls around it: a "Preview" label (with Play when there's an animation)
- * over a coloured backdrop. It takes no taps and screen readers read it as one picture.
- */
-@Composable
-private fun PreviewFrame(
-    tag: String,
-    onReplay: (() -> Unit)? = null,
-    replayDescription: String = "",
-    content: @Composable ColumnScope.() -> Unit,
-) {
-    Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp).fillMaxWidth()) {
-        Row(Modifier.heightIn(min = 40.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                Icons.Outlined.Visibility,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = 4.dp).size(16.dp),
-            )
-            Text(
-                "Preview",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.weight(1f).padding(start = 6.dp),
-            )
-            onReplay?.let { ReplayButton(replayDescription, "$tag-replay", it) }
-        }
-        Column(
-            Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(24.dp))
-                .background(
-                    Brush.linearGradient(
-                        listOf(
-                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f),
-                            MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.6f),
-                        ),
-                    ),
-                ).padding(12.dp)
-                .testTag(tag)
-                .clearAndSetSemantics { contentDescription = "Preview" },
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            content = content,
-        )
-    }
-}
-
-/** The results panel inside a preview. */
-@Composable
-private fun PreviewPanel(content: @Composable ColumnScope.() -> Unit) {
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(MaterialTheme.colorScheme.surfaceContainer)
-            .padding(8.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-        content = content,
-    )
-}
-
 /** A small number box; only 1 to [MAX_RECENTS] is saved, anything else just shows as an error. */
 @Composable
 private fun RecentsCountField(
@@ -1140,16 +1160,15 @@ private fun RecentsCountField(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        OutlinedTextField(
+        CompactField(
             value = text,
             onValueChange = { typed ->
                 text = typed.filter(Char::isDigit).take(2)
                 text.toIntOrNull()?.takeIf { it in 1..MAX_RECENTS }?.let(onChange)
             },
-            singleLine = true,
             isError = !valid,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
-            modifier = Modifier.padding(start = 12.dp).width(80.dp).testTag("recents-count"),
+            modifier = Modifier.padding(start = 12.dp).width(56.dp).testTag("recents-count"),
         )
     }
 }
@@ -1191,24 +1210,33 @@ private fun ActiveItemSection(
     actions: SettingsActions,
 ) {
     SettingsGroup("Active item", Icons.Outlined.AutoAwesome) {
-        Choice("Top result", TopResultStyle.entries, prefs.topResult, {
+        PictureChoice("Top result", TopResultStyle.entries, prefs.topResult, {
             when (it) {
                 TopResultStyle.Featured -> "Featured"
                 TopResultStyle.Inline -> "In its section"
             }
-        }, { v -> actions.update { it.copy(topResult = v) } }, "top-result")
+        }, { v ->
+            actions.update {
+                it.copy(topResult = v)
+            }
+        }, "top-result", info = TOP_RESULT_INFO) {
+            TopResultPicture(it)
+        }
         SettingsDivider()
         SwitchRow(
             "Selected result by the search bar",
-            "Keeps the best match at the bottom of the list, easier to reach",
+            "The best match sits right above the bar, where your thumb is",
             prefs.selectedAtBottom,
             { v -> actions.update { it.copy(selectedAtBottom = v) } },
             "selected-at-bottom",
+            info =
+                "Handy with the bar at the bottom: the result Enter opens is always just above the keyboard, " +
+                    "and the rest scroll above it.",
         )
         SettingsDivider()
-        Choice("Style", ActiveItemStyle.entries, prefs.activeItemStyle, {
+        PictureChoice("Style", ActiveItemStyle.entries, prefs.activeItemStyle, {
             it.label()
-        }, { v -> actions.update { it.copy(activeItemStyle = v) } }, "active-item")
+        }, { v -> actions.update { it.copy(activeItemStyle = v) } }, "active-item") { ActiveItemPicture(it) }
         SettingsDivider()
         SwitchRow(
             "Animation when it becomes active",
@@ -1222,7 +1250,6 @@ private fun ActiveItemSection(
                 actions.update { it.copy(itemAnimation = v) }
             }, "item-animation")
         }
-        ActiveItemPreview(prefs)
     }
 }
 
@@ -1248,20 +1275,7 @@ private fun <T> AnimationChips(
 }
 
 @Composable
-private fun PreviewBar(modifier: Modifier = Modifier) {
-    Box(
-        modifier
-            .height(52.dp)
-            .clip(RoundedCornerShape(28.dp))
-            .background(MaterialTheme.colorScheme.surfaceContainerHighest),
-        contentAlignment = Alignment.CenterStart,
-    ) {
-        Text("Search...", color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 20.dp))
-    }
-}
-
-@Composable
-private fun ReplayButton(
+internal fun ReplayButton(
     description: String,
     tag: String,
     onClick: () -> Unit,
@@ -1271,93 +1285,6 @@ private fun ReplayButton(
     }
 }
 
-/** The search bar playing the chosen opening animation; replays when the choice changes or on Play. */
-@Composable
-private fun BarPreview(prefs: UserPreferences) {
-    var replay by remember { mutableIntStateOf(0) }
-    val animation = prefs.toSurfaceStyle().barAnimation
-    PreviewFrame(
-        "bar-preview",
-        onReplay = { replay += 1 }.takeIf { animation != null },
-        replayDescription = "Play the search bar animation",
-    ) {
-        PreviewBar(Modifier.fillMaxWidth().openingGlow(animation, cornerRadius = 28.dp, replay = replay))
-    }
-}
-
-/**
- * A small results panel laid out like the real one: the best match as a card on top, in its section,
- * or by the search bar, in the chosen style. Changing any of those, or Play, replays the item animation.
- */
-@Composable
-private fun ActiveItemPreview(prefs: UserPreferences) {
-    var replay by remember { mutableIntStateOf(0) }
-    val style = prefs.toSurfaceStyle()
-    CompositionLocalProvider(LocalSurfaceStyle provides style) {
-        PreviewFrame(
-            "active-item-preview",
-            onReplay = { replay += 1 }.takeIf { style.itemAnimation != null },
-            replayDescription = "Play the active item animation",
-        ) {
-            PreviewPanel {
-                key(replay, prefs.topResult, prefs.selectedAtBottom, prefs.itemAnimation, prefs.activeItemStyle) {
-                    val card = !style.inlineTop || prefs.selectedAtBottom
-                    if (card && !prefs.selectedAtBottom) PreviewCard()
-                    PreviewRow("Example result", active = !card)
-                    PreviewRow("Another result", active = false)
-                    if (prefs.selectedAtBottom) PreviewCard()
-                }
-            }
-            PreviewBar(Modifier.fillMaxWidth())
-        }
-    }
-}
-
-@Composable
-private fun PreviewCard() {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .activeHighlight(selected = true, cornerRadius = 24.dp)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        PreviewIcon(40.dp)
-        Column {
-            Text("Best match", style = MaterialTheme.typography.titleMedium)
-            Text("Top result", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-    }
-}
-
-@Composable
-private fun PreviewRow(
-    title: String,
-    active: Boolean,
-    subtitle: String? = null,
-) {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .activeHighlight(selected = active, cornerRadius = 20.dp)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        PreviewIcon(32.dp)
-        Column {
-            Text(title, style = MaterialTheme.typography.bodyLarge)
-            subtitle?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-        }
-    }
-}
-
-@Composable
-private fun PreviewIcon(size: Dp) {
-    Box(Modifier.size(size).clip(RoundedCornerShape(10.dp)).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)))
-}
-
 // --- Background ---
 
 @Composable
@@ -1365,28 +1292,32 @@ private fun BackgroundSection(
     prefs: UserPreferences,
     actions: SettingsActions,
 ) {
-    SettingsGroup("Background", Icons.Outlined.Wallpaper) {
-        BackgroundPreview(prefs)
-        Choice(
+    SettingsGroup(
+        "Background",
+        Icons.Outlined.Wallpaper,
+        more = {
+            SliderRow("Dim behind search", prefs.dimAmount, 0f..0.9f, "${(prefs.dimAmount * 100).roundToInt()}%", "dim") { v ->
+                actions.update { it.copy(dimAmount = v) }
+            }
+            if (prefs.backgroundStyle != BackgroundStyle.Solid) {
+                SliderRow("Blur strength", prefs.blurRadiusDp.toFloat(), 0f..60f, "${prefs.blurRadiusDp} dp", "blur") { v ->
+                    actions.update { it.copy(blurRadiusDp = v.roundToInt()) }
+                }
+            }
+        },
+    ) {
+        PictureChoice(
             "Style",
             BackgroundStyle.entries,
             prefs.backgroundStyle,
             { if (it == BackgroundStyle.FrostedGlass) "Frosted" else it.name },
             { v -> actions.update { it.copy(backgroundStyle = v) } },
             "background",
-        )
-        SliderRow("Dim behind search", prefs.dimAmount, 0f..0.9f, "${(prefs.dimAmount * 100).roundToInt()}%", "dim") { v ->
-            actions.update {
-                it.copy(dimAmount = v)
-            }
-        }
-        if (prefs.backgroundStyle != BackgroundStyle.Solid) {
-            SliderRow("Blur strength", prefs.blurRadiusDp.toFloat(), 0f..60f, "${prefs.blurRadiusDp} dp", "blur") { v ->
-                actions.update {
-                    it.copy(blurRadiusDp = v.roundToInt())
-                }
-            }
-        } else {
+            info =
+                "Blur softens the app behind search. Frosted also lays a see-through panel under the results. " +
+                    "Solid hides the app behind.",
+        ) { BackgroundPicture(it) }
+        if (prefs.backgroundStyle == BackgroundStyle.Solid) {
             Row(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 SOLID_SWATCHES.forEach { argb ->
                     val selected = prefs.solidColor == argb
@@ -1483,45 +1414,6 @@ private fun SliderRow(
     }
 }
 
-/** A small mock of the surface over sample content, showing the chosen style live. */
-@Composable
-private fun BackgroundPreview(prefs: UserPreferences) {
-    val frosted = prefs.backgroundStyle == BackgroundStyle.FrostedGlass
-    Box(
-        Modifier
-            .padding(horizontal = 12.dp, vertical = 8.dp)
-            .fillMaxWidth()
-            .height(130.dp)
-            .clip(RoundedCornerShape(24.dp))
-            .testTag("background-preview"),
-    ) {
-        // Stand-in for "the app underneath".
-        Box(
-            Modifier
-                .fillMaxSize()
-                .then(if (prefs.backgroundStyle != BackgroundStyle.Solid) Modifier.blur((prefs.blurRadiusDp / 2).dp) else Modifier)
-                .background(Brush.linearGradient(listOf(Color(0xFFFF8A65), Color(0xFF4FC3F7), Color(0xFF81C784)))),
-        )
-        val overlay = if (prefs.backgroundStyle == BackgroundStyle.Solid) Color(prefs.solidColor.toInt()) else Color.Black
-        Box(Modifier.fillMaxSize().background(overlay.copy(alpha = prefs.dimAmount)))
-        Surface(
-            shape = RoundedCornerShape(18.dp),
-            color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = if (frosted) 0.55f else 1f),
-            border = if (frosted) BorderStroke(1.dp, Color.White.copy(alpha = 0.14f)) else null,
-            modifier =
-                Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(12.dp)
-                    .fillMaxWidth()
-                    .height(56.dp),
-        ) {
-            Box(
-                contentAlignment = Alignment.CenterStart,
-            ) { Text("Search...", modifier = Modifier.padding(start = 16.dp)) }
-        }
-    }
-}
-
 // --- Keyboard, feedback, motion ---
 
 @Composable
@@ -1542,15 +1434,23 @@ private fun KeyboardSection(
             prefs.enterRunsSelected,
             { v -> actions.update { it.copy(enterRunsSelected = v) } },
             "enter-runs",
+            info = "Type “cal” and press Enter to open Calculator straight away.",
         )
         SettingsDivider()
-        SwitchRow("Haptic feedback", null, prefs.haptics, { v -> actions.update { it.copy(haptics = v) } }, "haptics")
-        SettingsDivider()
-        SwitchRow("Reduce motion", "Fades instead of slides and springs", prefs.reduceMotion, { v ->
+        SwitchRow("Haptic feedback", "A light tap when you open or long-press a result", prefs.haptics, { v ->
             actions.update {
-                it.copy(reduceMotion = v)
+                it.copy(haptics = v)
             }
-        }, "reduce-motion")
+        }, "haptics")
+        SettingsDivider()
+        SwitchRow(
+            "Reduce motion",
+            "Calmer: fades instead of slides, and no glows or animations",
+            prefs.reduceMotion,
+            { v -> actions.update { it.copy(reduceMotion = v) } },
+            "reduce-motion",
+            info = "Turns off the search bar and active item animations too, whatever they're set to.",
+        )
     }
 }
 

@@ -18,6 +18,12 @@ enum class Section(
     val weight: Float,
 ) {
     QuickAnswers("Answer", 2.0f),
+
+    /** The "tr hello" translation card, under its own heading. */
+    Translation("Translation", 1.9f),
+
+    /** Site shortcuts ("yt: cats"); weighted so a keyword beats any app whose name starts the same. */
+    Sites("Search with", 1.5f),
     Apps("Apps", 1.0f),
     Contacts("Contacts", 0.9f),
     Calendar("Calendar", 0.85f),
@@ -72,6 +78,9 @@ enum class Glyph {
     History,
     Chat,
     Calendar,
+    Translate,
+    Map,
+    Weather,
 }
 
 sealed interface ResultIcon {
@@ -150,4 +159,6 @@ data class SearchResult(
     /** Package of the app that opens this result; the UI shows its icon (or a badge over thumbnails). */
     val handler: String? = null,
     val toggle: ToggleSpec? = null,
+    /** Lines the title may wrap to; most rows are one line, a translation needs more. */
+    val titleMaxLines: Int = 1,
 )

@@ -130,7 +130,7 @@ fun ResultRow(
                                 else -> MaterialTheme.typography.bodyLarge
                             },
                         fontWeight = if (prominent) FontWeight.SemiBold else FontWeight.Normal,
-                        maxLines = 1,
+                        maxLines = result.titleMaxLines,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false),
                     )

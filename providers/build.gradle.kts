@@ -38,6 +38,9 @@ dependencies {
     implementation(libs.okhttp)
     // On-device photo labels; the model ships inside the app, no network.
     implementation(libs.mlkit.image.labeling)
+    // Offline translation (optional); language models download on first use.
+    implementation(libs.mlkit.translate)
+    implementation(libs.mlkit.language.id)
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
 

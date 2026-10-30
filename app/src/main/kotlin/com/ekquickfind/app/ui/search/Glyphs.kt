@@ -17,6 +17,7 @@ import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Map
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material.icons.outlined.Search
@@ -24,9 +25,11 @@ import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.SwapHoriz
 import androidx.compose.material.icons.outlined.ToggleOn
+import androidx.compose.material.icons.outlined.Translate
 import androidx.compose.material.icons.outlined.TravelExplore
 import androidx.compose.material.icons.outlined.VideoFile
 import androidx.compose.material.icons.outlined.VisibilityOff
+import androidx.compose.material.icons.outlined.WbSunny
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.ekquickfind.core.search.Glyph
 
@@ -41,6 +44,9 @@ fun Glyph.vector(): ImageVector =
         Glyph.Suggestion -> Icons.Outlined.Search
         Glyph.Contact -> Icons.Outlined.Person
         Glyph.Calendar -> Icons.Outlined.Event
+        Glyph.Translate -> Icons.Outlined.Translate
+        Glyph.Map -> Icons.Outlined.Map
+        Glyph.Weather -> Icons.Outlined.WbSunny
         Glyph.Call -> Icons.Outlined.Call
         Glyph.Message -> Icons.AutoMirrored.Outlined.Message
         Glyph.File -> Icons.AutoMirrored.Outlined.InsertDriveFile

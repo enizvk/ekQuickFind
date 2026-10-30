@@ -5,6 +5,7 @@ import com.ekquickfind.core.search.RankingSignals
 import com.ekquickfind.core.search.ResultId
 import com.ekquickfind.core.search.SearchResult
 import com.ekquickfind.core.search.SignalsSource
+import com.ekquickfind.data.prefs.MAX_RECENTS
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 
@@ -16,7 +17,7 @@ class HistoryRepository(
     private val clock: () -> Long = System::currentTimeMillis,
 ) : SignalsSource {
     val pins: Flow<List<Pin>> = dao.pins()
-    val recentResults: Flow<List<RecentResult>> = dao.recentResults(RECENT_RESULTS)
+    val recentResults: Flow<List<RecentResult>> = dao.recentResults(MAX_RECENTS)
 
     override suspend fun snapshot(): RankingSignals =
         RankingSignals(
@@ -54,7 +55,6 @@ class HistoryRepository(
     suspend fun prune() = dao.pruneLaunchesBefore(clock() - RETENTION_MS)
 
     private companion object {
-        const val RECENT_RESULTS = 8
         const val RETENTION_MS = 90L * 24 * 60 * 60 * 1000
     }
 }

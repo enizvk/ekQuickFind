@@ -109,6 +109,10 @@ Spotlight made "just type it" the fastest way around a Mac. ekQuickFind brings t
 - 🌟 **Active item styles and animations**: a tinted card, soft glow or gradient highlight, and a light sweep, colour pulse, shimmer ring, breathe or twin lights on the search bar. Each one has a live preview in settings.
 - 🎯 **Exact match** with one tap in the search bar, for whole words only.
 - ♻️ **Reset all settings** in one tap, keeping your history, pins and hidden results.
+- ⚡ **Site shortcuts**: type `yt cats`, `tr hello`, `map pizza`, `play calculator`, `wiki Andromeda` or `r android tips` to search that site straight away (in its app when it's installed), or add your own with a keyword. Like a separator? Set your own, such as `:` for `yt: cats`.
+- 🌤️ **Weather card**: `weather sofia`, `w sofia` (or just `weather`) shows the temperature, sky and today's high and low right in the results.
+- 🈯 **Translation card**: `tr My house is very nice` shows the translation in its own group in the results, into the language you pick. Tap to copy. Uses Google's web translator, or translates on the phone and offline if you prefer.
+- 🧭 **Friendlier settings**: search settings by name, a live preview pinned on Look and feel, pictures instead of words for layouts and styles, one-tap Quick looks, "More options" for the rare stuff, and Reset for any panel you've changed.
 - 👋 **A friendly first start**: allow everything ekQuickFind can search in one go, no digging through system settings, and the floating button is ready right away.
 
 ## 🧩 Features
@@ -123,6 +127,8 @@ Spotlight made "just type it" the fastest way around a Mac. ekQuickFind brings t
 - 🧮 **Quick answers**: a calculator and unit conversion for length, weight, volume, temperature, time, data and speed
 - 🌐 **Web**: live suggestions from Google (default), DuckDuckGo, Bing, Brave or your own engine, plus a "Search the web" row; web search can be turned off entirely
 - 🤖 **Ask AI**: hand what you typed to ChatGPT, Claude or Gemini in one tap
+- ⚡ **Site shortcuts**: YouTube, Google Translate, Google Maps, Play Store, Wikipedia and Reddit with a keyword (`yt cats`), plus your own sites. Wikipedia, Reddit and Weather start off; turn them on in Search sites. Delete any you don't want, and Restore default sites brings them back
+- 🌤️ **Weather**: a live card for any place, or where you are (off until you turn it on)
 
 ### 🧠 Smart results
 - ✍️ Typo-tolerant matching that highlights the letters that matched, including initials: "gm" finds Google Maps
@@ -130,7 +136,7 @@ Spotlight made "just type it" the fastest way around a Mac. ekQuickFind brings t
 - ⏎ The best match is selected, so Enter opens it; arrow keys move the selection on a hardware keyboard
 - 📈 Results you open rank higher over time
 - 📌 Pin favourites, hide results and exclude apps
-- 🕘 Recently opened items as a list or a strip of chips, as many as you like (5 by default, up to 20)
+- 🕘 Recently opened items as a list or a strip of chips, as many as you like (5 by default, up to 20); Clear recents empties the list without forgetting what you use most
 - 💡 Smart suggestions, Next up and a Clipboard chip before you type, each with its own switch
 - 👇 "More below" names the sections that are still out of view
 
@@ -140,7 +146,8 @@ Spotlight made "just type it" the fastest way around a Mac. ekQuickFind brings t
 - 🏆 The best match in its own section with an animated highlight, or as a big card on top
 - ✨ A tinted, soft-glow or gradient highlight on the active result, with its own animation (settle, lift or a border glow)
 - 🌈 A gentle animation on the search bar when it opens: light sweep, colour pulse, shimmer ring, breathe or twin lights
-- 👀 Live previews next to every look option, so you see the result before leaving settings
+- 👀 A live preview pinned on Look and feel, picture choices for layouts and styles, and Quick looks (Minimal, Balanced, Showcase)
+- 🔍 Search in settings, an ⓘ explanation on the trickier options, and Reset for any panel
 - 👍 Search bar at the bottom or top, with the selected result kept right above it for one-handed use
 - 🧊 Frosted glass, blur or solid background with adjustable dim and blur strength, including Samsung's own blur on One UI
 - 🌗 Light, dark or system theme, wallpaper colours and ten accent colours
@@ -169,9 +176,11 @@ Everything above is configurable, grouped into pages like the system Settings ap
 ## 🔒 Private by design
 
 - 🏠 History, pins and settings stay on your phone. No accounts, no analytics, no ads.
-- 🌐 Only web suggestions and the daily update check (direct-download version) use the network. Both can be turned off, and web search can be switched off entirely.
+- 🌐 Only web suggestions, the weather and translation cards and the daily update check (direct-download version) use the network. Each can be turned off, and web search can be switched off entirely.
 - 📸 Photo tags are worked out on the phone; no photo ever leaves it.
 - 🧠 Smart suggestions are learned from your own history, on the phone.
+- 🌤️ Weather asks [Open-Meteo](https://open-meteo.com) only when you search for weather. "weather" with no place uses your approximate location, which is never stored.
+- 🈯 Translation sends only the text after `tr` to Google's web translator, after a short pause in typing. Choose "On this phone" to translate offline with Google ML Kit instead; nothing leaves the phone then.
 - 📋 The clipboard is only read when you tap the Clipboard chip. The clips you open are kept on the phone for 7 days, never in backups, and Clear history removes them. Text Android marks as sensitive, like passwords, is never read or kept.
 - ☁️ History is left out of cloud backups unless you turn that on.
 
@@ -193,4 +202,4 @@ Copyright 2026 ekQuickFind contributors.
 
 Licensed under the [Apache License, Version 2.0](LICENSE). You may use, change and share the code, including in other projects, as long as you keep the license and notices.
 
-Photo tags use [Google ML Kit](https://developers.google.com/ml-kit) image labelling (and the Google support libraries it brings with it). It runs on the phone, but Google distributes it under its own [terms](https://developers.google.com/ml-kit/terms) rather than an open-source license. ekQuickFind's other libraries are open source. The result fonts Lora, JetBrains Mono, Roboto Condensed and Nunito are bundled under the [SIL Open Font License 1.1](app/src/main/assets/licenses/fonts).
+Photo tags and offline translation use [Google ML Kit](https://developers.google.com/ml-kit) (image labelling, translation and language identification) (and the Google support libraries it brings with it). It runs on the phone, but Google distributes it under its own [terms](https://developers.google.com/ml-kit/terms) rather than an open-source license. ekQuickFind's other libraries are open source. The result fonts Lora, JetBrains Mono, Roboto Condensed and Nunito are bundled under the [SIL Open Font License 1.1](app/src/main/assets/licenses/fonts). Weather data is by [Open-Meteo.com](https://open-meteo.com), under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).

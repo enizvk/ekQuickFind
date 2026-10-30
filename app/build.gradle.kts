@@ -73,6 +73,9 @@ android {
         }
     }
 
+    // Compressed native code: a much smaller download (ML Kit's translator alone is ~16 MB), unpacked on install.
+    packaging { jniLibs { useLegacyPackaging = true } }
+
     // Release key lives outside the project; keystore.properties (not committed) points at it.
     val keystoreProps =
         rootProject.file("keystore.properties").takeIf { it.exists() }?.let { file ->

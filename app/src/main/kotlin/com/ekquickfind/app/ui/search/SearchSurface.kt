@@ -17,6 +17,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -44,6 +45,7 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -76,6 +78,7 @@ import com.ekquickfind.core.search.Section
 import com.ekquickfind.core.search.SectionResults
 import com.ekquickfind.data.prefs.BackgroundStyle
 import com.ekquickfind.data.prefs.SurfacePosition
+import com.ekquickfind.providers.sites.KeywordHint
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -102,10 +105,15 @@ fun SearchSurface(
     onOpenSettings: (() -> Unit)? = null,
     /** Flips exact match from the bar; null hides the toggle. */
     onToggleExact: (() -> Unit)? = null,
+    /** A site keyword typed at the start, coloured in the bar. */
+    keywordHint: KeywordHint? = null,
     /** Lets the caller attach a shared-element transition to the query bar. */
     barModifier: Modifier = Modifier,
     /** Recently opened results for the optional strip next to the bar. */
     recentStrip: List<SearchResult> = emptyList(),
+    /** Shown first in the recent strip before anything is typed (the Clipboard chip). */
+    stripLead: (@Composable () -> Unit)? = null,
+    onClearRecents: (() -> Unit)? = null,
     /** Null hides the panel while the query is empty. */
     zeroQueryContent: (@Composable () -> Unit)? = { ZeroQueryHint() },
 ) {
@@ -254,82 +262,116 @@ fun SearchSurface(
                             modifier = barModifier,
                             exactMatch = style.exactMatch,
                             onToggleExact = onToggleExact,
+                            keyword = keywordHint,
                         )
                     }
-                    val strip = @Composable {
-                        if (style.recentsStrip && recentStrip.isNotEmpty()) ResultsFont { RecentsStrip(recentStrip, menuActions, onAction) }
+                    val lead = stripLead?.takeIf { query.isBlank() }
+                    val showStrip = style.recentsStrip && (recentStrip.isNotEmpty() || lead != null)
+                    // Nothing typed: the recents sit at the top inside the panel. Typing: their own strip next to it.
+                    val stripInPanel = state.query.isBlank && zeroQueryContent != null
+                    // No end padding: chips scroll to the panel's rounded edge instead of a square cut.
+                    val stripRow = @Composable { modifier: Modifier ->
+                        Box(modifier) { RecentsStrip(recentStrip, menuActions, onAction, lead, onClearRecents) }
                     }
-                    surfaceParts(barAtTop = atTop, stripOnTop = style.stripOnTop).forEach { part ->
-                        when (part) {
-                            SurfacePart.Field -> field()
-                            SurfacePart.Strip -> strip()
-                            SurfacePart.Panel ->
-                                if (!state.query.isBlank || zeroQueryContent != null) {
-                                    Panel(Modifier.weight(1f, fill = false)) {
-                                        ResultsFont {
-                                            if (state.query.isBlank) {
-                                                Box(Modifier.padding(8.dp)) { zeroQueryContent?.invoke() }
-                                            } else {
-                                                val slot = rows.getOrNull(selected)?.takeIf { style.selectedAtBottom }
-                                                Column {
-                                                    // Without a cue, results hidden below the fold (often under the selected slot) go unnoticed.
-                                                    val moreBelow by remember { derivedStateOf { listState.canScrollForward } }
-                                                    Box(Modifier.weight(1f, fill = false)) {
-                                                        ResultList(
-                                                            state = state,
-                                                            listState = listState,
-                                                            expanded = expanded,
-                                                            selectedId = rows.getOrNull(selected)?.id,
-                                                            menuActions = menuActions,
-                                                            onAction = onAction,
-                                                            modifier = Modifier.nestedScroll(gestures).fadeBottomEdge(moreBelow),
-                                                            slotId = slot?.id,
-                                                        )
-                                                    }
-                                                    val belowLabel by remember(state.sections) {
-                                                        derivedStateOf {
-                                                            val current =
-                                                                listState.layoutInfo.visibleItemsInfo
-                                                                    .lastOrNull()
-                                                                    ?.contentType as? Section
-                                                            moreBelowLabel(state.sections.map { it.section.title }, current?.title)
-                                                        }
-                                                    }
-                                                    MoreBelowBar(
-                                                        visible = moreBelow,
-                                                        label = belowLabel,
-                                                        onClick = {
-                                                            keyboard?.hide()
-                                                            scope.launch {
-                                                                listState.animateScrollBy(
-                                                                    listState.layoutInfo.viewportSize.height * 0.8f,
-                                                                )
-                                                            }
-                                                        },
-                                                    )
-                                                    // A scroll container that never moves, so swipes on the slot reach the same gestures as the list.
-                                                    slot?.let {
-                                                        SelectedSlot(
-                                                            it,
-                                                            menuActions,
-                                                            onAction,
-                                                            state.query.normalized,
-                                                            Modifier.nestedScroll(gestures).verticalScroll(rememberScrollState()),
-                                                        )
-                                                    }
+                    val strip = @Composable {
+                        if (showStrip && !stripInPanel) {
+                            // The same panel as the results, so the two read as one piece.
+                            Panel(Modifier.fillMaxWidth()) {
+                                ResultsFont { stripRow(Modifier.padding(start = 6.dp, top = 6.dp, bottom = 6.dp)) }
+                            }
+                        }
+                    }
+                    val panel = @Composable { modifier: Modifier ->
+                        if (!state.query.isBlank || zeroQueryContent != null) {
+                            Panel(modifier) {
+                                ResultsFont {
+                                    if (state.query.isBlank) {
+                                        Column {
+                                            if (showStrip) stripRow(Modifier.padding(start = 8.dp, top = 8.dp))
+                                            Box(Modifier.padding(8.dp)) { zeroQueryContent?.invoke() }
+                                        }
+                                    } else {
+                                        val slot = rows.getOrNull(selected)?.takeIf { style.selectedAtBottom }
+                                        Column {
+                                            // Without a cue, results hidden below the fold (often under the selected slot) go unnoticed.
+                                            val moreBelow by remember { derivedStateOf { listState.canScrollForward } }
+                                            Box(Modifier.weight(1f, fill = false)) {
+                                                ResultList(
+                                                    state = state,
+                                                    listState = listState,
+                                                    expanded = expanded,
+                                                    selectedId = rows.getOrNull(selected)?.id,
+                                                    menuActions = menuActions,
+                                                    onAction = onAction,
+                                                    modifier = Modifier.nestedScroll(gestures).fadeBottomEdge(moreBelow),
+                                                    slotId = slot?.id,
+                                                )
+                                            }
+                                            val belowLabel by remember(state.sections) {
+                                                derivedStateOf {
+                                                    val current =
+                                                        listState.layoutInfo.visibleItemsInfo
+                                                            .lastOrNull()
+                                                            ?.contentType as? Section
+                                                    moreBelowLabel(state.sections.map { it.section.title }, current?.title)
                                                 }
+                                            }
+                                            MoreBelowBar(
+                                                visible = moreBelow,
+                                                label = belowLabel,
+                                                onClick = {
+                                                    keyboard?.hide()
+                                                    scope.launch {
+                                                        listState.animateScrollBy(
+                                                            listState.layoutInfo.viewportSize.height * 0.8f,
+                                                        )
+                                                    }
+                                                },
+                                            )
+                                            // A scroll container that never moves, so swipes on the slot reach the same gestures as the list.
+                                            slot?.let {
+                                                SelectedSlot(
+                                                    it,
+                                                    menuActions,
+                                                    onAction,
+                                                    state.query.normalized,
+                                                    Modifier.nestedScroll(gestures).verticalScroll(rememberScrollState()),
+                                                )
                                             }
                                         }
                                     }
                                 }
+                            }
                         }
                     }
+                    // The strip and the results sit close together, as one block; the bar keeps the usual gap.
+                    val parts = surfaceParts(barAtTop = atTop, stripOnTop = style.stripOnTop)
+                    if (atTop) field()
+                    Column(Modifier.weight(1f, fill = false), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        parts.forEach { part ->
+                            when (part) {
+                                SurfacePart.Strip -> strip()
+                                SurfacePart.Panel -> panel(Modifier.weight(1f, fill = false))
+                                SurfacePart.Field -> Unit
+                            }
+                        }
+                    }
+                    if (!atTop) field()
                 }
             }
         }
     }
 
-    LaunchedEffect(state.query.raw) { if (listState.firstVisibleItemIndex > 0) listState.scrollToItem(0) }
+    // Late results (a translation, the weather) land above the rows already shown, and the list would keep showing
+    // those. Back to the top on each new query or new first row, unless you scrolled this query's results yourself.
+    val currentQuery by rememberUpdatedState(state.query.raw)
+    var scrolledQuery by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(listState) {
+        listState.interactionSource.interactions.collect { if (it is DragInteraction.Start) scrolledQuery = currentQuery }
+    }
+    LaunchedEffect(state.query.raw, rows.firstOrNull()?.id) {
+        if (scrolledQuery != state.query.raw && listState.firstVisibleItemIndex > 0) listState.scrollToItem(0)
+    }
 }
 
 internal enum class SurfacePart { Field, Strip, Panel }

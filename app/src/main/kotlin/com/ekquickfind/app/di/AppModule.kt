@@ -27,6 +27,7 @@ import com.ekquickfind.data.history.HistoryRepository
 import com.ekquickfind.data.photos.PhotoTagStore
 import com.ekquickfind.data.photos.RoomPhotoTagStore
 import com.ekquickfind.data.prefs.PreferencesRepository
+import com.ekquickfind.data.prefs.Translator
 import com.ekquickfind.data.prefs.userPreferencesStore
 import com.ekquickfind.providers.HandlerResolver
 import com.ekquickfind.providers.PermissionChecker
@@ -52,6 +53,14 @@ import com.ekquickfind.providers.settings.AndroidToggleStates
 import com.ekquickfind.providers.settings.DeviceSettingsProvider
 import com.ekquickfind.providers.settings.IntentResolver
 import com.ekquickfind.providers.settings.SettingsTable
+import com.ekquickfind.providers.sites.SitesConfig
+import com.ekquickfind.providers.sites.SitesProvider
+import com.ekquickfind.providers.translate.GoogleWebTranslator
+import com.ekquickfind.providers.translate.OnDeviceTranslator
+import com.ekquickfind.providers.translate.TranslateProvider
+import com.ekquickfind.providers.weather.AndroidLocation
+import com.ekquickfind.providers.weather.OpenMeteoClient
+import com.ekquickfind.providers.weather.WeatherProvider
 import com.ekquickfind.providers.web.NetworkPolicy
 import com.ekquickfind.providers.web.WebEngine
 import com.ekquickfind.providers.web.WebFallback
@@ -66,6 +75,7 @@ import dagger.multibindings.IntoSet
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import okhttp3.OkHttpClient
@@ -186,6 +196,55 @@ object ProvidersModule {
             handlers = handlers,
             photoTags = PhotoTagSearch { q -> if (prefs.preferences.first().photoTags) photoTags.search(q) else emptyList() },
         )
+
+    @Provides
+    @IntoSet
+    fun sites(
+        @ApplicationContext context: Context,
+        prefs: PreferencesRepository,
+    ): SearchProvider =
+        SitesProvider(
+            config = { SitesConfig.from(prefs.preferences.first()) },
+            isInstalled = { context.packageManager.getLaunchIntentForPackage(it) != null },
+        )
+
+    @Provides
+    @IntoSet
+    fun translate(
+        @ApplicationContext context: Context,
+        prefs: PreferencesRepository,
+        http: OkHttpClient,
+    ): SearchProvider {
+        val google = GoogleWebTranslator(http)
+        // ML Kit only loads once offline translation is chosen.
+        val offline by lazy { OnDeviceTranslator() }
+        return TranslateProvider(
+            prefs = { prefs.preferences.first() },
+            translators = { if (it == Translator.OnDevice) offline else google },
+            useOffline = { prefs.update { it.copy(translator = Translator.OnDevice) } },
+            isInstalled = { context.packageManager.getLaunchIntentForPackage(it) != null },
+            io = Dispatchers.IO,
+        )
+    }
+
+    @Provides
+    @IntoSet
+    fun weather(
+        @ApplicationContext context: Context,
+        prefs: PreferencesRepository,
+        http: OkHttpClient,
+        policy: NetworkPolicy,
+    ): SearchProvider {
+        val location = AndroidLocation(context)
+        return WeatherProvider(
+            prefs = { prefs.preferences.first() },
+            client = OpenMeteoClient(http),
+            location = { location.approximate() },
+            permissions = PermissionChecker.of(context),
+            policy = policy,
+            io = Dispatchers.IO,
+        )
+    }
 
     @Provides
     @IntoSet
@@ -312,6 +371,7 @@ object EngineModule {
                 val p = prefs.preferences.first()
                 if (p.nextUp && CalendarProvider.ID.value !in p.disabledProviders) calendar.nextUp() else null
             },
+            recentsClearedAt = prefs.preferences.map { it.recentsClearedAt }.distinctUntilChanged(),
         )
     }
 

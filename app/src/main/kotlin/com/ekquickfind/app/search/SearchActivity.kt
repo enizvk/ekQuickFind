@@ -23,6 +23,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalView
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -37,6 +38,7 @@ import com.ekquickfind.app.onboarding.OnboardingScreen
 import com.ekquickfind.app.settings.SettingsViewModel
 import com.ekquickfind.app.shortcuts.ShortcutsPublisher
 import com.ekquickfind.app.ui.search.ClipboardSlot
+import com.ekquickfind.app.ui.search.ClipboardStripChip
 import com.ekquickfind.app.ui.search.SearchSurface
 import com.ekquickfind.app.ui.search.ZeroQueryContent
 import com.ekquickfind.app.ui.search.clipboardHasText
@@ -141,7 +143,16 @@ class SearchActivity : ComponentActivity() {
                                 LaunchedEffect(Unit) { background.apply(style, blurEnabled = false) }
                                 SettingsRoute(null, nav, Modifier.sharedBounds(rememberSharedContentState(BAR_KEY), this@composable))
                             }
-                            composable("$SETTINGS/{page}") { entry ->
+                            composable(
+                                "$SETTINGS/{page}?focus={focus}",
+                                arguments =
+                                    listOf(
+                                        androidx.navigation.navArgument("focus") {
+                                            nullable = true
+                                            defaultValue = null
+                                        },
+                                    ),
+                            ) { entry ->
                                 LaunchedEffect(Unit) { background.apply(style, blurEnabled = false) }
                                 val page =
                                     entry.arguments?.getString("page")?.let { name ->
@@ -150,7 +161,7 @@ class SearchActivity : ComponentActivity() {
                                                 name
                                         }
                                     }
-                                SettingsRoute(page, nav, Modifier)
+                                SettingsRoute(page, nav, Modifier, focus = entry.arguments?.getString("focus"))
                             }
                             composable(EXCLUDED_APPS) {
                                 val settings: SettingsViewModel = hiltViewModel()
@@ -176,6 +187,7 @@ class SearchActivity : ComponentActivity() {
         page: SettingsPage?,
         nav: androidx.navigation.NavController,
         barModifier: Modifier,
+        focus: String? = null,
     ) {
         val settings: SettingsViewModel = hiltViewModel()
         val settingsPrefs by settings.preferences.collectAsStateWithLifecycle()
@@ -208,7 +220,9 @@ class SearchActivity : ComponentActivity() {
             },
             photoTagProgress = photoTagProgress,
             page = page,
+            focus = focus,
             onOpenPage = { nav.navigate("$SETTINGS/${it.name}") },
+            onOpenPanel = { target, panel -> nav.navigate("$SETTINGS/${target.name}?focus=${android.net.Uri.encode(panel)}") },
         )
     }
 
@@ -221,6 +235,7 @@ class SearchActivity : ComponentActivity() {
         val query by viewModel.query.collectAsStateWithLifecycle()
         val state by viewModel.state.collectAsStateWithLifecycle()
         val zeroQueryAll by viewModel.zeroQueryState.collectAsStateWithLifecycle()
+        val keywordHint by viewModel.keywordHint.collectAsStateWithLifecycle()
         val prefs by viewModel.preferences.collectAsStateWithLifecycle()
         val zeroQuery = remember(zeroQueryAll, prefs.recentsCount) { zeroQueryAll.limitRecents(prefs.recentsCount) }
         // Android only answers clipboard questions once the window has focus, so check again when it gets it.
@@ -230,6 +245,16 @@ class SearchActivity : ComponentActivity() {
         val clipNow = remember(focused) { focused && clipboardHasText(context) }
         val clips by viewModel.clips.collectAsStateWithLifecycle()
         val showClipboard = prefs.clipboardChip && (clipNow || clips.isNotEmpty())
+        var clipOpen by remember { mutableStateOf(false) }
+        val openClip = {
+            com.ekquickfind.app.ui.search
+                .readClipboard(context)
+                ?.let(viewModel::rememberClip)
+            // In the strip the chip toggles; in the panel it just opens.
+            clipOpen = !clipOpen || !prefs.recentsStrip
+        }
+        // With the strip on, the chip lives in the strip; the open clips still show in the panel.
+        val chipInStrip = prefs.recentsStrip
         val pinned by viewModel.pinnedIds.collectAsStateWithLifecycle()
         val style = LocalSurfaceStyle.current
         val view = LocalView.current
@@ -260,29 +285,36 @@ class SearchActivity : ComponentActivity() {
                 blurAvailable = blurAvailable,
                 onOpenSettings = openSettings,
                 onToggleExact = if (style.exactMatchButton) ({ viewModel.setExactMatch(!style.exactMatch) }) else null,
+                keywordHint = keywordHint,
                 barModifier = barModifier,
                 // Recent items only; pinned ones already have their own section.
                 recentStrip = zeroQuery.recent,
+                stripLead = if (showClipboard && chipInStrip) ({ ClipboardStripChip(openClip) }) else null,
+                onClearRecents = viewModel::clearRecents,
+                // The panel always shows before typing; with nothing to list it shows the hint.
                 zeroQueryContent =
-                    if (zeroQuery.showsPanel(recentsInStrip = style.recentsStrip) || showClipboard) {
-                        {
-                            ZeroQueryContent(
-                                state = zeroQuery,
-                                clipboard =
-                                    if (showClipboard) {
-                                        ClipboardSlot(clips, viewModel::rememberClip, viewModel::forgetClip)
-                                    } else {
-                                        null
-                                    },
-                                menuActions = { result -> pinToggle(result, pinned) },
-                                onAction = { result, action -> run(result, action) },
-                                onQuery = viewModel::onQueryChange,
-                                onForgetRecent = { viewModel.forgetRecent(it.id) },
-                                onClearHistory = { viewModel.clearHistory() },
-                            )
-                        }
-                    } else {
-                        null
+                    {
+                        ZeroQueryContent(
+                            state = zeroQuery,
+                            clipboard =
+                                if (showClipboard) {
+                                    ClipboardSlot(
+                                        clips,
+                                        viewModel::rememberClip,
+                                        viewModel::forgetClip,
+                                        clipOpen,
+                                        openClip,
+                                        chipInStrip,
+                                    )
+                                } else {
+                                    null
+                                },
+                            menuActions = { result -> pinToggle(result, pinned) },
+                            onAction = { result, action -> run(result, action) },
+                            onQuery = viewModel::onQueryChange,
+                            onForgetRecent = { viewModel.forgetRecent(it.id) },
+                            onClearHistory = { viewModel.clearHistory() },
+                        )
                     },
             )
         }

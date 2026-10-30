@@ -20,20 +20,14 @@ import com.ekquickfind.core.search.Section
 import com.ekquickfind.core.search.TextNormalizer
 import com.ekquickfind.providers.HandlerResolver
 import com.ekquickfind.providers.android
+import com.ekquickfind.providers.getText
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
-import okhttp3.Call
-import okhttp3.Callback
 import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.Response
 import java.io.IOException
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
 
 data class WebSettingsSnapshot(
     val suggestionsEnabled: Boolean,
@@ -116,7 +110,7 @@ class WebProvider(
             delay(debounceMillis)
             val body =
                 try {
-                    withContext(io) { get(url) }
+                    withContext(io) { http.getText(url) }
                 } catch (_: IOException) {
                     emit(emptyList())
                     return@flow
@@ -153,43 +147,6 @@ class WebProvider(
         emphasis = Emphasis.Completion,
         handler = browser,
     )
-
-    // Suspends on OkHttp's async call so cancelling the coroutine cancels the request.
-    private suspend fun get(url: String): String =
-        suspendCancellableCoroutine { cont ->
-            val call =
-                http.newCall(
-                    Request
-                        .Builder()
-                        .url(url)
-                        .header("Accept", "application/json")
-                        .build(),
-                )
-            cont.invokeOnCancellation { call.cancel() }
-            call.enqueue(
-                object : Callback {
-                    override fun onFailure(
-                        call: Call,
-                        e: IOException,
-                    ) {
-                        if (cont.isActive) cont.resumeWithException(e)
-                    }
-
-                    override fun onResponse(
-                        call: Call,
-                        response: Response,
-                    ) {
-                        response.use {
-                            if (!it.isSuccessful) {
-                                cont.resumeWithException(IOException("HTTP ${it.code}"))
-                            } else {
-                                cont.resume(it.body.string())
-                            }
-                        }
-                    }
-                },
-            )
-        }
 
     companion object {
         val ID = ProviderId("web")

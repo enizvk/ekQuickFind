@@ -15,6 +15,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
@@ -55,6 +56,7 @@ import androidx.compose.ui.semantics.SemanticsPropertyKey
 import androidx.compose.ui.semantics.SemanticsPropertyReceiver
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.ekquickfind.app.ui.theme.LocalSurfaceStyle
 import com.ekquickfind.core.search.Action
@@ -264,12 +266,19 @@ internal fun SectionHeader(
 
 @Composable
 fun ZeroQueryHint() {
-    Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Icon(Icons.Outlined.Search, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+    // A quiet, centred note: the icon above, the text below.
+    val dim = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+    Column(
+        Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Icon(Icons.Outlined.Search, contentDescription = null, tint = dim, modifier = Modifier.size(20.dp))
         Text(
             "Type to search apps, contacts, settings, files, quick answers and the web.",
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = dim,
+            textAlign = TextAlign.Center,
         )
     }
 }

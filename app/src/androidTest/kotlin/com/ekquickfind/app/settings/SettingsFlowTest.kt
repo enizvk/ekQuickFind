@@ -12,6 +12,7 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertContentDescriptionEquals
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasTestTag
@@ -127,6 +128,13 @@ class SettingsFlowTest {
             back()
             compose.waitUntil(3_000) { exists("settings-menu") }
         }
+    }
+
+    /** Opens a panel's "More options". */
+    private fun expand(panel: String) {
+        scrollTo("more:$panel")
+        compose.onNodeWithTag("more:$panel", useUnmergedTree = true).performClick()
+        compose.waitForIdle()
     }
 
     private fun scrollTo(tag: String) {
@@ -310,11 +318,10 @@ class SettingsFlowTest {
     @Test
     fun previewsAreReadAsPicturesNotControls() {
         openSettings("Look")
-        scrollTo("text-preview")
-        compose.onNodeWithTag("text-preview", useUnmergedTree = true).assertContentDescriptionEquals("Preview")
+        compose.onNodeWithTag("look-preview-picture", useUnmergedTree = true).assertContentDescriptionEquals("Preview")
         assertFalse(
             compose
-                .onNodeWithTag("text-preview", useUnmergedTree = true)
+                .onNodeWithTag("look-preview-picture", useUnmergedTree = true)
                 .fetchSemanticsNode()
                 .config
                 .contains(SemanticsActions.OnClick),
@@ -332,10 +339,11 @@ class SettingsFlowTest {
     @Test
     fun theResultWeightChoiceChangesTheStoredWeightAndShowsASample() {
         openSettings("Look")
+        expand("Text")
         scrollTo("result-weight:Bold")
         compose.onNodeWithTag("result-weight:Bold", useUnmergedTree = true).performClick()
         compose.waitUntil(2_000) { runBlocking { prefs.preferences.first().resultWeight == com.ekquickfind.data.prefs.ResultWeight.Bold } }
-        scrollTo("text-preview")
+        compose.waitUntil(2_000) { exists("look-preview") }
     }
 
     // Effects
@@ -363,8 +371,7 @@ class SettingsFlowTest {
         compose.waitUntil(2_000) {
             runBlocking { prefs.preferences.first().barAnimation == com.ekquickfind.data.prefs.BarAnimation.Breathe }
         }
-        scrollTo("bar-preview-replay")
-        compose.onNodeWithTag("bar-preview-replay", useUnmergedTree = true).performClick()
+        compose.onNodeWithTag("look-preview-replay", useUnmergedTree = true).performClick()
     }
 
     @Test
@@ -375,9 +382,7 @@ class SettingsFlowTest {
         compose.waitUntil(2_000) {
             runBlocking { prefs.preferences.first().itemAnimation == com.ekquickfind.data.prefs.ItemAnimation.Lift }
         }
-        scrollTo("active-item-preview")
-        scrollTo("active-item-preview-replay")
-        compose.onNodeWithTag("active-item-preview-replay", useUnmergedTree = true).performClick()
+        compose.onNodeWithTag("look-preview-replay", useUnmergedTree = true).performClick()
     }
 
     @Test
@@ -452,6 +457,7 @@ class SettingsFlowTest {
     @Test
     fun theRecentItemsCountTakesNumbersFromOneToTwentyOnly() {
         openSettings("Look")
+        expand("Search bar")
         scrollTo("recents-count")
         compose.onNodeWithTag("recents-count", useUnmergedTree = true).performTextReplacement("12")
         compose.waitUntil(2_000) { runBlocking { prefs.preferences.first().recentsCount == 12 } }
@@ -497,6 +503,94 @@ class SettingsFlowTest {
         assertTrue(runBlocking { prefs.preferences.first().onboardingDone })
     }
 
+    // Friendlier settings
+
+    @Test
+    fun searchingSettingsOpensThePanelItFound() {
+        openSettings()
+        compose.onNodeWithTag("settings-search", useUnmergedTree = true).performTextInput("blur")
+        compose.onNodeWithTag("settings-result:Blur strength", useUnmergedTree = true).performClick()
+        compose.waitUntil(3_000) { exists("settings-group:Background") && exists("look-preview") }
+    }
+
+    @Test
+    fun aQuickLookChangesTheLookAndAPanelCanBeReset() {
+        openSettings("Look")
+        scrollTo("look:Minimal")
+        compose.onNodeWithTag("look:Minimal", useUnmergedTree = true).performClick()
+        compose.waitUntil(2_000) {
+            runBlocking { prefs.preferences.first().backgroundStyle == com.ekquickfind.data.prefs.BackgroundStyle.Solid }
+        }
+        scrollTo("reset-panel:Background")
+        compose.onNodeWithTag("reset-panel:Background", useUnmergedTree = true).performClick()
+        compose.waitUntil(2_000) {
+            runBlocking {
+                prefs.preferences.first().backgroundStyle ==
+                    com.ekquickfind.data.prefs
+                        .UserPreferences()
+                        .backgroundStyle
+            }
+        }
+    }
+
+    @Test
+    fun aPictureChoiceSetsTheLayout() {
+        openSettings("Sources")
+        scrollTo("layout:Contacts:Chips")
+        compose.onNodeWithTag("layout:Contacts:Chips", useUnmergedTree = true).performClick()
+        compose.waitUntil(2_000) {
+            runBlocking { prefs.preferences.first().layoutFor(SectionKey.Contacts) == SectionLayout.Chips }
+        }
+    }
+
+    // Search sites
+
+    @Test
+    fun theSeparatorAndASiteCheckboxAreStored() {
+        openSettings("WebAi")
+        expand("Search sites")
+        scrollTo("site-separator")
+        compose.onNodeWithTag("site-separator", useUnmergedTree = true).performTextInput("->")
+        scrollTo("site-switch:reddit")
+        compose.onNodeWithTag("site-switch:reddit", useUnmergedTree = true).performClick()
+        compose.waitUntil(2_000) {
+            runBlocking { prefs.preferences.first().let { it.siteSeparator == "->" && it.sites["reddit"]?.enabled == true } }
+        }
+    }
+
+    @Test
+    fun addingYourOwnSiteSavesItOnlyWhenItsValid() {
+        openSettings("WebAi")
+        scrollTo("add-site-url")
+        compose.onNodeWithTag("add-site-name", useUnmergedTree = true).performTextInput("Example")
+        compose.onNodeWithTag("add-site-keyword", useUnmergedTree = true).performTextInput("yt")
+        compose.onNodeWithTag("add-site-url", useUnmergedTree = true).performTextInput("https://example.com/?q=%s")
+        // "yt" belongs to YouTube.
+        compose.onNodeWithTag("add-site", useUnmergedTree = true).assertIsNotEnabled()
+        compose.onNodeWithTag("add-site-keyword", useUnmergedTree = true).performTextReplacement("ex")
+        compose.onNodeWithTag("add-site", useUnmergedTree = true).performClick()
+        compose.waitUntil(2_000) {
+            runBlocking {
+                prefs.preferences
+                    .first()
+                    .customSites
+                    .any { it.keyword == "ex" && it.url == "https://example.com/?q=%s" }
+            }
+        }
+    }
+
+    @Test
+    fun aTypedKeywordSwapsTheSearchIconForTheSites() {
+        compose.onNodeWithTag("query").performTextInput("yt ")
+        compose.waitUntil(2_000) { exists("keyword-icon") }
+    }
+
+    @Test
+    fun aSiteKeywordMakesItTheBestMatch() {
+        compose.onNodeWithTag("query").performTextInput("yt lofi")
+        compose.waitUntilAtLeastOneExists(hasText("Search YouTube for “lofi”"), 3_000)
+    }
+
     // Exact match toggle
 
     @Test
@@ -506,6 +600,7 @@ class SettingsFlowTest {
         set { it.copy(exactMatchButton = false, exactMatch = false) }
         compose.waitUntil(3_000) { !exists("exact-toggle") }
         openSettings("Look")
+        expand("Search bar")
         scrollTo("exact-button-switch")
         compose.onNodeWithTag("exact-button-switch", useUnmergedTree = true).performClick()
         compose.waitUntil(2_000) { runBlocking { prefs.preferences.first().exactMatchButton } }

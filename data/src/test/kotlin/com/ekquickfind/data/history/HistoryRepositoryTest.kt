@@ -129,6 +129,16 @@ class HistoryRepositoryTest {
         }
 
     @Test
+    fun recentResultsGoUpToTheLargestRecentsCount() =
+        runTest {
+            repeat(25) { i ->
+                now += 1
+                history.recordLaunch(app("App$i", 0.5f))
+            }
+            assertEquals(20, history.recentResults.first().size)
+        }
+
+    @Test
     fun forgettingOneRecentResultLeavesOthers() =
         runTest {
             history.recordLaunch(app("A", 0.5f))

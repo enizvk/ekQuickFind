@@ -278,3 +278,20 @@ On the first start the app SHALL show a welcome screen before search, listing wh
 #### Scenario: Allow all
 - **WHEN** a new user taps "Allow all" and accepts each dialog and the overlay switch
 - **THEN** every row shows a tick, the floating button appears, and "Start searching" opens search
+
+### Requirement: Settings that explain themselves
+Settings SHALL help people see and find what they change:
+
+- **Search settings**: a search box on the settings menu finds options by name or other words ("blur", "font", "keyword") and lists them as "Page › Panel"; tapping one opens the page, scrolls to the panel and briefly highlights it.
+- **Pinned preview**: Look and feel keeps a live preview at the top (background over a stand-in app, the search bar with its opening animation, and real result rows with the active item, in the chosen text, icons, density, top-result layout and bar position); it shrinks to the bar and best match while scrolling, and Play replays the animations. It replaces the separate previews.
+- **Picture choices**: section layout, bar position, background style, active item style and top result are chosen from small pictures of each option.
+- **Quick looks**: Minimal (solid, still, compact), Balanced (the default look) and Showcase (frosted glass, big icons, glows) change only the look in one tap; the one matching the current settings is marked.
+- **Simpler panels**: rarer options sit under "More options" (results per section; recent strip position, recent items shown and the exact match button; font weight; dim and blur strength; keyword separator and weather units). A panel that differs from its defaults shows a dot and "Reset", which puts back only that panel's options (sites you added are kept).
+- **Explanations**: trickier options have an ⓘ with a short explanation and an example.
+
+#### Scenario: Finding blur
+- **WHEN** the user types "blur" in the settings search and taps "Blur strength"
+- **THEN** Look and feel opens at the Background panel, which flashes briefly
+
+### Requirement: The panel before typing never goes missing
+Before anything is typed the results panel SHALL always show: the next event, pins, suggestions and recents (when they aren't in the strip), or the "type to search" hint when there's nothing to list. With the recent strip on, the Clipboard chip sits first in the strip, and the open clips show in the panel.

@@ -51,6 +51,30 @@ enum class ResultFont { Default, Serif, Monospace, Condensed, Rounded }
 @Serializable
 enum class ResultWeight { Light, Regular, Medium, Bold }
 
+/** A ready-made search site's switch and keyword; a null keyword keeps the site's own ("yt"). */
+@Serializable
+data class SiteState(
+    val enabled: Boolean = true,
+    val keyword: String? = null,
+)
+
+/** A site the user added: searches go to [url] with %s replaced by the search. */
+@Serializable
+data class CustomSite(
+    val id: String,
+    val name: String,
+    val keyword: String,
+    val url: String,
+)
+
+/** Auto follows the region (°F in the US). */
+@Serializable
+enum class WeatherUnits { Auto, Celsius, Fahrenheit }
+
+/** Where inline translations come from: Google's web translator, or ML Kit on the phone (offline). */
+@Serializable
+enum class Translator { Google, OnDevice }
+
 /** Featured: the best match as a big card above the sections. Inline: it stays in its section, highlighted. */
 @Serializable
 enum class TopResultStyle { Featured, Inline }
@@ -94,6 +118,8 @@ enum class SectionLayout { Rows, Grid, Chips }
 @Serializable
 enum class SectionKey {
     QuickAnswers,
+    Translation,
+    Sites,
     Apps,
     Contacts,
     Calendar,
@@ -109,7 +135,7 @@ enum class SectionKey {
 
     companion object {
         /** Order of result sections; Recent lists aren't part of it. */
-        val defaultOrder = listOf(QuickAnswers, Apps, Contacts, Calendar, Settings, Files, Web, AskAi)
+        val defaultOrder = listOf(QuickAnswers, Translation, Sites, Apps, Contacts, Calendar, Settings, Files, Web, AskAi)
         val defaultLayouts =
             mapOf(Apps to SectionLayout.Grid, Settings to SectionLayout.Chips, Recent to SectionLayout.Chips, AskAi to SectionLayout.Chips)
     }
@@ -169,6 +195,21 @@ data class UserPreferences(
     val clipboardChip: Boolean = true,
     /** The first-start welcome (permissions in one go) was finished or skipped. */
     val onboardingDone: Boolean = false,
+    /** "Clear recents" time: things opened before it leave the recent list but still count for ranking. */
+    val recentsClearedAt: Long = 0L,
+    /** Ready-made search sites (YouTube, Translate, Weather…) by id; missing ones use their own keyword and default on/off. */
+    val sites: Map<String, SiteState> = emptyMap(),
+    val customSites: List<CustomSite> = emptyList(),
+    /** Ready-made sites the user deleted; "Restore default sites" brings them back. */
+    val removedSites: Set<String> = emptySet(),
+    /** Optional symbols after a site keyword ("yt: cats" with ":"); empty means just a space. */
+    val siteSeparator: String = "",
+    val weatherUnits: WeatherUnits = WeatherUnits.Auto,
+    /** "tr hello" shows the translation in the results, not just a row that opens Translate. */
+    val translateInline: Boolean = true,
+    /** Language code to translate into; empty means the phone's language. */
+    val translateTo: String = "",
+    val translator: Translator = Translator.Google,
     /** The exact-match button in the search bar; hiding it also turns exact match off. */
     val exactMatchButton: Boolean = true,
     // Reduce motion turns both animations off.
@@ -199,7 +240,13 @@ data class UserPreferences(
     fun layoutFor(section: SectionKey): SectionLayout = sectionLayouts[section] ?: SectionKey.defaultLayouts[section] ?: SectionLayout.Rows
 
     /** Every setting back to its default; hidden results (and excluded apps) are the user's data, the rest are facts. */
-    fun resetToDefaults() = UserPreferences(hiddenResults = hiddenResults, tileAdded = tileAdded, onboardingDone = onboardingDone)
+    fun resetToDefaults() =
+        UserPreferences(
+            hiddenResults = hiddenResults,
+            tileAdded = tileAdded,
+            onboardingDone = onboardingDone,
+            recentsClearedAt = recentsClearedAt,
+        )
 
     fun sanitized() =
         copy(
@@ -211,11 +258,32 @@ data class UserPreferences(
             floatingButtonY = floatingButtonY.coerceIn(0f, 1f),
             textScale = textScale.coerceIn(MIN_TEXT_SCALE, MAX_TEXT_SCALE),
             recentsCount = recentsCount.coerceIn(1, MAX_RECENTS),
-            sectionOrder = (sectionOrder.filter { it in SectionKey.defaultOrder } + SectionKey.defaultOrder).distinct(),
+            siteSeparator = siteSeparator.trim().takeIf(::isValidSiteSeparator).orEmpty(),
+            sectionOrder = completeOrder(sectionOrder),
         )
 }
 
 const val MAX_RECENTS = 20
+
+/** Sections added after people had saved an order, and the section each one goes right after. */
+private val addedLater = mapOf(SectionKey.Translation to SectionKey.QuickAnswers)
+
+/** [saved] plus any sections it lacks, at the end; ones added later go next to where they belong instead. */
+internal fun completeOrder(saved: List<SectionKey>): List<SectionKey> {
+    val order = saved.filter { it in SectionKey.defaultOrder }.distinct().toMutableList()
+    SectionKey.defaultOrder.filter { it !in order }.forEach { key ->
+        val after = addedLater[key]?.let(order::indexOf) ?: -1
+        if (after >= 0) order.add(after + 1, key) else order.add(key)
+    }
+    return order
+}
+
+const val MAX_SITE_SEPARATOR = 3
+
+/** Up to a few symbols with no letters, digits or spaces, so it can't be read as part of a keyword or search. */
+fun isValidSiteSeparator(separator: String): Boolean =
+    separator.length in 1..MAX_SITE_SEPARATOR && separator.none { it.isLetterOrDigit() || it.isWhitespace() }
+
 const val MIN_TEXT_SCALE = 0.8f
 const val MAX_TEXT_SCALE = 1.6f
 

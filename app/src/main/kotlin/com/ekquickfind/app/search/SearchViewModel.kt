@@ -17,6 +17,8 @@ import com.ekquickfind.data.clips.ClipRepository
 import com.ekquickfind.data.history.HistoryRepository
 import com.ekquickfind.data.prefs.PreferencesRepository
 import com.ekquickfind.data.prefs.UserPreferences
+import com.ekquickfind.providers.sites.KeywordHint
+import com.ekquickfind.providers.sites.SitesConfig
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -109,6 +111,14 @@ class SearchViewModel
             prefs.preferences.map { !it.onboardingDone }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
         fun finishOnboarding() = viewModelScope.launch { prefs.update { it.copy(onboardingDone = true) } }
+
+        /** A site keyword typed at the start of the bar, so the bar can show it's a shortcut. */
+        val keywordHint: StateFlow<KeywordHint?> =
+            combine(_query, prefs.preferences) { text, p -> SitesConfig.from(p).hint(text) }
+                .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+        /** Empties the recent list; launches still count for ranking. */
+        fun clearRecents() = viewModelScope.launch { prefs.update { it.copy(recentsClearedAt = System.currentTimeMillis()) } }
 
         fun setExactMatch(on: Boolean) = viewModelScope.launch { prefs.update { it.copy(exactMatch = on) } }
 

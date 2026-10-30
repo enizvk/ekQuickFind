@@ -45,6 +45,7 @@ class PersonalisationPreferencesTest {
         assertTrue(p.nextUp)
         assertTrue(p.clipboardChip)
         assertFalse(p.onboardingDone)
+        assertEquals("", p.siteSeparator)
         assertTrue(p.barAnimationOn)
         assertTrue(p.itemAnimationOn)
         assertEquals(ItemAnimation.TwinLights, p.itemAnimation)
@@ -73,10 +74,16 @@ class PersonalisationPreferencesTest {
                 hiddenResults = mapOf("apps:com.example" to "Example"),
                 tileAdded = true,
                 onboardingDone = true,
+                recentsClearedAt = 123L,
             )
         val reset = customised.resetToDefaults()
         assertEquals(
-            UserPreferences(hiddenResults = mapOf("apps:com.example" to "Example"), tileAdded = true, onboardingDone = true),
+            UserPreferences(
+                hiddenResults = mapOf("apps:com.example" to "Example"),
+                tileAdded = true,
+                onboardingDone = true,
+                recentsClearedAt = 123L,
+            ),
             reset,
         )
     }
@@ -86,6 +93,15 @@ class PersonalisationPreferencesTest {
         assertEquals(1, UserPreferences(recentsCount = 0).sanitized().recentsCount)
         assertEquals(20, UserPreferences(recentsCount = 40).sanitized().recentsCount)
         assertEquals(7, UserPreferences(recentsCount = 7).sanitized().recentsCount)
+    }
+
+    @Test
+    fun aSiteSeparatorIsAFewSymbolsOrNothing() {
+        assertEquals(":", UserPreferences(siteSeparator = " : ").sanitized().siteSeparator)
+        assertEquals("->", UserPreferences(siteSeparator = "->").sanitized().siteSeparator)
+        assertEquals("", UserPreferences(siteSeparator = "ab").sanitized().siteSeparator)
+        assertEquals("", UserPreferences(siteSeparator = "::::").sanitized().siteSeparator)
+        assertEquals("", UserPreferences(siteSeparator = ": -").sanitized().siteSeparator)
     }
 
     @Test
@@ -172,6 +188,8 @@ class PersonalisationPreferencesTest {
                     SectionKey.Settings,
                     SectionKey.Apps,
                     SectionKey.QuickAnswers,
+                    SectionKey.Translation,
+                    SectionKey.Sites,
                     SectionKey.Contacts,
                     SectionKey.Calendar,
                     SectionKey.Files,
@@ -196,6 +214,8 @@ class PersonalisationPreferencesTest {
             assertEquals(
                 listOf(
                     SectionKey.QuickAnswers,
+                    SectionKey.Translation,
+                    SectionKey.Sites,
                     SectionKey.Apps,
                     SectionKey.Settings,
                     SectionKey.Contacts,
@@ -216,5 +236,38 @@ class PersonalisationPreferencesTest {
         assertEquals(60, p.blurRadiusDp)
         assertEquals(0.9f, p.dimAmount, 0f)
         assertEquals(8, p.resultsPerSection)
+    }
+
+    @Test
+    fun translationShowsInlineWithGoogleIntoThePhonesLanguageByDefault() {
+        val p = UserPreferences()
+        assertEquals(true, p.translateInline)
+        assertEquals("", p.translateTo)
+        assertEquals(Translator.Google, p.translator)
+    }
+
+    @Test
+    fun aNewSectionJoinsASavedOrderNextToWhereItBelongs() {
+        val saved =
+            listOf(
+                SectionKey.Apps,
+                SectionKey.QuickAnswers,
+                SectionKey.Sites,
+                SectionKey.Contacts,
+                SectionKey.Calendar,
+                SectionKey.Settings,
+                SectionKey.Files,
+                SectionKey.Web,
+                SectionKey.AskAi,
+            )
+        assertEquals(
+            listOf(SectionKey.Apps, SectionKey.QuickAnswers, SectionKey.Translation) + saved.drop(2),
+            UserPreferences(sectionOrder = saved).sanitized().sectionOrder,
+        )
+    }
+
+    @Test
+    fun noReadyMadeSiteIsRemovedByDefault() {
+        assertEquals(emptySet<String>(), UserPreferences().removedSites)
     }
 }

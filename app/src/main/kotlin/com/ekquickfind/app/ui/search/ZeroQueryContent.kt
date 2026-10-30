@@ -22,6 +22,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.ekquickfind.app.search.ZeroQueryState
 import com.ekquickfind.app.ui.theme.LocalSurfaceStyle
@@ -67,7 +68,7 @@ fun ZeroQueryContent(
             onDismiss = { confirmClear = false },
         )
     }
-    if (state.isEmpty) {
+    if (state.onlyHint(recentsInStrip = LocalSurfaceStyle.current.recentsStrip)) {
         Column {
             clipboard?.let { ClipboardSection(it, onSearch = onQuery) }
             ZeroQueryHint()
@@ -82,8 +83,16 @@ fun ZeroQueryContent(
     ) {
         clipboard?.let { ClipboardSection(it, onSearch = onQuery) }
         RowsSection("Next up", listOfNotNull(state.nextUp), menuActions, onAction)
-        RowsSection("Pinned", state.pinned, menuActions, onAction)
         val style = LocalSurfaceStyle.current
+        // A grid of slightly smaller tiles, so pinned favourites stay compact.
+        RowsSection(
+            "Pinned",
+            state.pinned,
+            menuActions,
+            onAction,
+            SectionLayout.Grid,
+            tileIconSize = style.tileIconSize * PINNED_ICON_SCALE,
+        )
         val clear = @Composable {
             TextButton(onClick = { confirmClear = true }, modifier = Modifier.testTag("clear-history")) { Text("Clear history") }
         }
@@ -101,6 +110,8 @@ fun ZeroQueryContent(
     }
 }
 
+private const val PINNED_ICON_SCALE = 0.85f
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun RowsSection(
@@ -110,6 +121,7 @@ private fun RowsSection(
     onAction: (SearchResult, Action) -> Unit,
     layout: SectionLayout = SectionLayout.Rows,
     trailing: (@Composable () -> Unit)? = null,
+    tileIconSize: Dp = LocalSurfaceStyle.current.tileIconSize,
 ) {
     if (rows.isEmpty()) return
     Header(title, trailing)
@@ -118,7 +130,9 @@ private fun RowsSection(
         SectionLayout.Grid ->
             rows.chunked(GRID_COLUMNS).forEach { chunk ->
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    chunk.forEach { r -> ResultTile(r, menuActions.forResult(r), { onAction(r, it) }, Modifier.weight(1f)) }
+                    chunk.forEach { r ->
+                        ResultTile(r, menuActions.forResult(r), { onAction(r, it) }, Modifier.weight(1f), iconSize = tileIconSize)
+                    }
                     repeat(GRID_COLUMNS - chunk.size) { Spacer(Modifier.weight(1f)) }
                 }
             }

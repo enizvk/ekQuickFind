@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,7 +33,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -78,7 +78,7 @@ fun clipboardHasText(context: Context): Boolean {
 private fun ClipDescription.isSensitive() = extras?.getBoolean(ClipDescription.EXTRA_IS_SENSITIVE) == true
 
 /** The current clip's text, or null when there's none or Android marks it sensitive. This read shows Android's message. */
-private fun readClipboard(context: Context): String? {
+internal fun readClipboard(context: Context): String? {
     val clipboard = context.getSystemService(ClipboardManager::class.java)
     if (clipboard.primaryClipDescription?.isSensitive() != false) return null
     return clipboard.primaryClip
@@ -89,11 +89,17 @@ private fun readClipboard(context: Context): String? {
         ?.ifEmpty { null }
 }
 
-/** Remembered clips, newest first, and how to remember or forget one. */
+/**
+ * Remembered clips, newest first, and how to remember or forget one. [open] is whether the clips are showing;
+ * [onOpen] reads the current clip and shows them. [chipInStrip] puts the Clipboard chip in the recent strip.
+ */
 class ClipboardSlot(
     val clips: List<String>,
     val remember: (String) -> Unit,
     val forget: (String) -> Unit,
+    val open: Boolean,
+    val onOpen: () -> Unit,
+    val chipInStrip: Boolean = false,
 )
 
 /**
@@ -106,14 +112,12 @@ internal fun ClipboardSection(
     onSearch: (String) -> Unit,
 ) {
     val context = LocalContext.current
-    var open by remember { mutableStateOf(false) }
     Column(Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
-        if (!open) {
+        if (!slot.open) {
+            // With the recent strip on, the chip sits in the strip instead.
+            if (slot.chipInStrip) return@Column
             AssistChip(
-                onClick = {
-                    readClipboard(context)?.let(slot.remember)
-                    open = true
-                },
+                onClick = slot.onOpen,
                 label = { Text("Clipboard") },
                 leadingIcon = { Icon(Icons.Outlined.ContentPaste, contentDescription = null, modifier = Modifier.size(18.dp)) },
                 modifier = Modifier.testTag("clipboard-chip"),
@@ -210,6 +214,30 @@ private fun PageDots(
                     .clip(CircleShape)
                     .background(if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant),
             )
+        }
+    }
+}
+
+/** The Clipboard chip as a small strip chip, first in the recent strip. */
+@Composable
+internal fun ClipboardStripChip(onOpen: () -> Unit) {
+    // Same box as a small ResultChip (padding, 20dp icon slot, gap, text), so it lines up with the recents.
+    // A plain clickable, not Surface(onClick), which would pad it to a 48dp touch box and push it down.
+    Surface(
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.tertiaryContainer,
+        contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+        modifier = Modifier.clip(CircleShape).clickable(onClick = onOpen).testTag("clipboard-chip"),
+    ) {
+        Row(
+            Modifier.padding(start = 4.dp, end = 10.dp, top = 4.dp, bottom = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Box(Modifier.size(20.dp), contentAlignment = Alignment.Center) {
+                Icon(Icons.Outlined.ContentPaste, contentDescription = null, modifier = Modifier.size(16.dp))
+            }
+            Text("Clipboard", style = MaterialTheme.typography.labelMedium, maxLines = 1)
         }
     }
 }

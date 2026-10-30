@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.content.pm.LauncherApps
 import android.content.pm.ShortcutInfo
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.Process
@@ -129,6 +130,8 @@ class LauncherAppsSource(
 
     private fun badgeFor(user: UserHandle): String? {
         if (user == Process.myUserHandle()) return null
+        // Profile types are readable from Android 15 (private space); before that it's a work profile.
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM) return "Work"
         val type = runCatching { launcherApps.getLauncherUserInfo(user)?.userType }.getOrNull()
         return when (type) {
             UserManager.USER_TYPE_PROFILE_PRIVATE -> "Private"

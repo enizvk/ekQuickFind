@@ -1,6 +1,7 @@
 package com.ekquickfind.app
 
 import android.app.Application
+import android.os.Build
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.updateAll
 import com.ekquickfind.app.di.AppScope
@@ -60,6 +61,9 @@ class EkQuickFindApp : Application() {
         }
         // Pinned results double as launcher shortcuts (long-press the ekQuickFind icon).
         ShortcutSync(zeroQuery, ShortcutsPublisher(this)).start(scope)
-        scope.launch { runCatching { GlanceAppWidgetManager(this@EkQuickFindApp).setWidgetPreviews(SearchWidgetReceiver::class) } }
+        // Generated widget-picker previews are Android 15+; older pickers show the default preview.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+            scope.launch { runCatching { GlanceAppWidgetManager(this@EkQuickFindApp).setWidgetPreviews(SearchWidgetReceiver::class) } }
+        }
     }
 }

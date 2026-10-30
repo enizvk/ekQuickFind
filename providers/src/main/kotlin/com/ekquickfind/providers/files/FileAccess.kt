@@ -3,6 +3,7 @@ package com.ekquickfind.providers.files
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Environment
 
 enum class Access { Full, Partial, None }
@@ -37,7 +38,10 @@ fun interface FileAccess {
         fun of(context: Context) =
             FileAccess {
                 fun granted(p: String) = context.checkSelfPermission(p) == PackageManager.PERMISSION_GRANTED
-                val selected = granted(Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED)
+                // Partial access ("Select photos") is Android 14+.
+                val selected =
+                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
+                        granted(Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED)
 
                 fun visual(p: String) =
                     when {

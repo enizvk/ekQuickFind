@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <img alt="Android 17+" src="https://img.shields.io/badge/Android-17%2B-3DDC84?logo=android&logoColor=white">
+  <img alt="Android 13+" src="https://img.shields.io/badge/Android-13%2B-3DDC84?logo=android&logoColor=white">
   <img alt="Kotlin" src="https://img.shields.io/badge/Kotlin-2.4-7F52FF?logo=kotlin&logoColor=white">
   <img alt="Jetpack Compose" src="https://img.shields.io/badge/Jetpack%20Compose-Material%203%20Expressive-4285F4?logo=jetpackcompose&logoColor=white">
   <img alt="Private" src="https://img.shields.io/badge/data-stays%20on%20your%20phone-2E7D32">
@@ -44,7 +44,7 @@
 
 Grab the latest APK from [Releases](https://github.com/enizvk/ekQuickFind/releases/latest). It keeps itself up to date: it checks once a day on Wi-Fi and installs new versions after you allow it once.
 
-Requires Android 17 or newer. ekQuickFind is free and open source.
+Requires Android 13 or newer. ekQuickFind is free and open source.
 
 ---
 

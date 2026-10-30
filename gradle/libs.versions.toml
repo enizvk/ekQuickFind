@@ -1,6 +1,7 @@
 [versions]
-# SDK levels live here only. Android 17 = API 37.
-minSdk = "37"
+# SDK levels live here only. minAndroid is the Android version of minSdk (Android 13 = API 33).
+minSdk = "33"
+minAndroid = "13"
 targetSdk = "37"
 compileSdk = "37"
 

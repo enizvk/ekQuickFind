@@ -1,6 +1,6 @@
 # Development
 
-A fast, private, Spotlight-style search for Android 17+ (API 37). Planning artifacts live in `openspec/changes/create-ekquickfind-app/` (proposal, specs, design, tasks).
+A fast, private, Spotlight-style search for Android 13+ (API 33, built against API 37). Planning artifacts live in `openspec/changes/create-ekquickfind-app/` (proposal, specs, design, tasks).
 
 ## Modules
 

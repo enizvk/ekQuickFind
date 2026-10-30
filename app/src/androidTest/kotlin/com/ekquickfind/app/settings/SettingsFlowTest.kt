@@ -156,13 +156,14 @@ class SettingsFlowTest {
     // 11.2: provider switches
 
     @Test
-    fun aboutShowsTheGitHubPageAndThePlainVersion() {
+    fun aboutShowsTheGitHubPageThePlainVersionAndTheRequirement() {
         openSettings("About")
         scrollTo("about")
         val version = context.packageManager.getPackageInfo(context.packageName, 0).versionName!!
         compose.onNode(hasTestTag("about-github"), useUnmergedTree = true).assertTextEquals(com.ekquickfind.app.BuildConfig.PROJECT_PAGE)
         // Just the version name; the build number isn't shown.
         compose.onNode(hasTestTag("about-version"), useUnmergedTree = true).assertTextEquals(version)
+        compose.onNode(hasTestTag("about-requires"), useUnmergedTree = true).assertTextEquals("Android 13 or newer")
     }
 
     @Test

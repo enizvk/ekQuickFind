@@ -44,6 +44,7 @@ android {
             "PROJECT_PAGE",
             "\"github.com/${providers.gradleProperty("ekquickfind.githubRepo").get()}\"",
         )
+        buildConfigField("String", "MIN_ANDROID", "\"${libs.versions.minAndroid.get()}\"")
     }
 
     val githubRepo = providers.gradleProperty("ekquickfind.githubRepo").get()
@@ -66,7 +67,7 @@ android {
         create("direct") {
             dimension = "distribution"
             isDefault = true
-            // One universal APK for sideloading: every Android 17 phone is 64-bit ARM, so skip the other
+            // One universal APK for sideloading: nearly every Android 13+ phone is 64-bit ARM, so skip the other
             // processors' native code (ML Kit's is ~10 MB each). The store build keeps every processor.
             ndk { abiFilters += "arm64-v8a" }
             buildConfigField("String", "UPDATE_FEED_URL", "\"$updateFeedUrl\"")

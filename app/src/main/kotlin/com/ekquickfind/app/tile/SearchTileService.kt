@@ -1,7 +1,9 @@
 package com.ekquickfind.app.tile
 
+import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.content.Intent
+import android.os.Build
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
 import com.ekquickfind.app.search.SearchActivity
@@ -30,15 +32,22 @@ class SearchTileService : TileService() {
     }
 
     override fun onClick() {
-        val pending =
-            PendingIntent.getActivity(
-                this,
-                0,
-                Intent(this, SearchActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-            )
+        val intent = Intent(this, SearchActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         // On the lock screen, ask to unlock first; search opens only after a successful unlock.
-        if (isLocked) unlockAndRun { startActivityAndCollapse(pending) } else startActivityAndCollapse(pending)
+        if (isLocked) unlockAndRun { open(intent) } else open(intent)
+    }
+
+    private fun open(intent: Intent) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            startActivityAndCollapse(
+                PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT),
+            )
+        } else {
+            // Android 13 only has the Intent version; the "throws when targeting 34" rule starts on Android 14.
+            @Suppress("DEPRECATION")
+            @SuppressLint("StartActivityAndCollapseDeprecated")
+            startActivityAndCollapse(intent)
+        }
     }
 
     override fun onTileAdded() {

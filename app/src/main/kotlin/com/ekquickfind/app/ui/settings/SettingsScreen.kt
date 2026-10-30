@@ -1606,6 +1606,7 @@ private fun AboutSection() {
                 context.startActivity(Intent(Intent.ACTION_VIEW, "https://$PROJECT_PAGE".toUri()).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             }
             AboutLine("Version", version, "about-version")
+            AboutLine("Requires", "Android ${BuildConfig.MIN_ANDROID} or newer", "about-requires")
         }
     }
 }

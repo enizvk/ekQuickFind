@@ -46,6 +46,15 @@ Grab the latest APK from [Releases](https://github.com/enizvk/ekQuickFind/releas
 
 Requires Android 13 or newer. ekQuickFind is free and open source.
 
+### Why allow "Install unknown apps"?
+
+Android only installs apps from the Play Store unless you allow another source. ekQuickFind comes straight from this page, so Android asks twice:
+
+1. **Your browser or file manager**, to open the APK you downloaded. You can switch it off again once ekQuickFind is installed.
+2. **ekQuickFind itself**, to install its own updates. It only downloads them from this repository's releases and checks each file's SHA-256 before installing. Android also refuses any update that isn't signed with the same key as the installed app.
+
+On Samsung phones, turn off **Auto Blocker** (Settings > Security and privacy > Auto Blocker) while you install, or it blocks the APK.
+
 ---
 
 ## ✨ Highlights

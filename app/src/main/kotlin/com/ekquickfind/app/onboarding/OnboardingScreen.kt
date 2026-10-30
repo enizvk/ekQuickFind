@@ -59,27 +59,49 @@ private class AccessRow(
     val icon: ImageVector,
     val title: String,
     val subtitle: String,
+    /** Why the permission is needed. */
+    val why: String,
     /** Runtime permissions behind it; empty means "Display over other apps". */
     val permissions: List<String>,
 )
 
 private val rows =
     listOf(
-        AccessRow(Icons.Outlined.Person, "Contacts", "Find people, call or text them", listOf(Manifest.permission.READ_CONTACTS)),
-        AccessRow(Icons.Outlined.Event, "Calendar", "Find events and see what's next", listOf(Manifest.permission.READ_CALENDAR)),
+        AccessRow(
+            Icons.Outlined.Person,
+            "Contacts",
+            "Find people, call or text them",
+            "Reads names and numbers on this phone so people show up as you type",
+            listOf(Manifest.permission.READ_CONTACTS),
+        ),
+        AccessRow(
+            Icons.Outlined.Event,
+            "Calendar",
+            "Find events and see what's next",
+            "Reads your events on this phone to match them and show what's coming up",
+            listOf(Manifest.permission.READ_CALENDAR),
+        ),
         AccessRow(
             Icons.Outlined.Image,
             "Photos, videos and music",
             "Find your media by name, and photos by what's in them",
+            "Reads file names, and looks at your photos on this phone to tag them. Nothing is uploaded",
             listOf(Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.READ_MEDIA_VIDEO, Manifest.permission.READ_MEDIA_AUDIO),
         ),
         AccessRow(
             Icons.Outlined.Bluetooth,
             "Nearby devices",
             "Turn Bluetooth on and off right from the results",
+            "Android asks for this before an app can switch Bluetooth",
             listOf(Manifest.permission.BLUETOOTH_CONNECT),
         ),
-        AccessRow(Icons.Outlined.Adjust, "Floating button", "Display over other apps: a search button on every screen", emptyList()),
+        AccessRow(
+            Icons.Outlined.Adjust,
+            "Floating button",
+            "Display over other apps: a search button on every screen",
+            "Needed to draw the button on top of other apps",
+            emptyList(),
+        ),
     )
 
 private fun Context.granted(permission: String) = checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED
@@ -189,6 +211,7 @@ private fun AccessLine(
         Column(Modifier.weight(1f)) {
             Text(row.title, style = MaterialTheme.typography.titleMedium)
             Text(row.subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(row.why, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         if (allowed) {
             Icon(Icons.Outlined.CheckCircle, contentDescription = "Allowed", tint = MaterialTheme.colorScheme.primary)

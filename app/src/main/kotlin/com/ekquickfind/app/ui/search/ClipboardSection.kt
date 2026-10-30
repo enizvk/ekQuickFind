@@ -1,5 +1,6 @@
 package com.ekquickfind.app.ui.search
 
+import android.content.ClipData
 import android.content.ClipDescription
 import android.content.ClipboardManager
 import android.content.Context
@@ -171,6 +172,10 @@ private fun ClipCard(
             Text(text, style = MaterialTheme.typography.bodyMedium, maxLines = 3, overflow = TextOverflow.Ellipsis)
             FlowRow(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 AssistChip(onClick = { onSearch(text) }, label = { Text("Search") }, modifier = Modifier.testTag("clipboard-search"))
+                // Puts this clip back on the clipboard, handy for an older one; Android shows its own "Copied" note.
+                AssistChip(onClick = {
+                    context.getSystemService(ClipboardManager::class.java)?.setPrimaryClip(ClipData.newPlainText("ekQuickFind", text))
+                }, label = { Text("Copy") }, modifier = Modifier.testTag("clipboard-copy"))
                 when (ClipKind.of(text)) {
                     ClipKind.Link ->
                         AssistChip(onClick = {

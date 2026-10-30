@@ -57,9 +57,11 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.OffsetMapping
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
@@ -161,9 +163,13 @@ internal fun QueryField(
             }
         }
     }
+    var field by remember { mutableStateOf(TextFieldValue(query, TextRange(query.length))) }
     BasicTextField(
-        value = query,
-        onValueChange = onQueryChange,
+        value = fieldValueFor(field, query),
+        onValueChange = {
+            field = it
+            if (it.text != query) onQueryChange(it.text)
+        },
         modifier =
             modifier
                 .fillMaxWidth()
@@ -209,6 +215,12 @@ internal fun QueryField(
 }
 
 private const val KEYWORD_FADE_MS = 220
+
+/** Text set from outside (another app's search, Clear) puts the cursor at the end; typing keeps it where it is. */
+internal fun fieldValueFor(
+    current: TextFieldValue,
+    query: String,
+): TextFieldValue = if (current.text == query) current else TextFieldValue(query, TextRange(query.length))
 
 /** Colours the first [end] characters (the site keyword) in the accent and bold; the pill behind is drawn separately. */
 private class KeywordHighlight(
